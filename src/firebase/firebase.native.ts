@@ -2,6 +2,7 @@ import firebase from 'firebase/compat/app';
 import 'firebase/compat/auth';
 import 'firebase/compat/firestore';
 import 'firebase/compat/storage';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // ⬇️ paste your real config from Firebase console
 const firebaseConfig = {

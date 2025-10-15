@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, FlatList, StyleSheet } from 'react-native';
-import { fetchRecentExpenses, Expense } from '@/services/expenses';
+import { observeRecentExpenses, Expense } from '@/services/expenses';
 
 export default function TransactionsScreen() {
   const [items, setItems] = useState<Expense[]>([]);
 
   useEffect(() => {
-    (async () => setItems(await fetchRecentExpenses(50)))();
+    const unsubscribe = observeRecentExpenses(50, setItems);
+    return unsubscribe;
   }, []);
 
   return (
