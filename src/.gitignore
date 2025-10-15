@@ -1,0 +1,22 @@
+# dependencies
+node_modules/
+.expo/
+.expo-shared/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# builds / caches
+dist/
+build/
+coverage/
+*.log
+
+# ios / android
+ios/Pods/
+android/.gradle/
+android/app/build/
+
+# misc
+.DS_Store
+.env
