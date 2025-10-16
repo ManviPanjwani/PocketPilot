@@ -16,6 +16,15 @@ import { observeMonthlySummary, MonthlySummary } from '@/services/expenses';
 import { observeUserProfile, upsertUserProfile, UserProfile } from '@/services/profile';
 import { observeActivity, ActivityEntry } from '@/services/activity';
 
+let VictoryPie: any;
+
+try {
+  const Victory = require('victory-native');
+  VictoryPie = Victory.VictoryPie;
+} catch (error) {
+  console.warn('Victory charts unavailable, showing summaries only.', error);
+}
+
 const currencyFormatter = new Intl.NumberFormat(undefined, {
   style: 'currency',
   currency: 'USD',
@@ -36,6 +45,7 @@ export default function HomeScreen() {
     remainingBudget: 0,
     transactions: 0,
     byCategory: [],
+    dailyTotals: [],
   });
   const [activity, setActivity] = useState<ActivityEntry[]>([]);
   const [editingIncome, setEditingIncome] = useState(false);
@@ -79,11 +89,28 @@ export default function HomeScreen() {
     return summary.byCategory
       .sort((a, b) => b.total - a.total)
       .slice(0, 4)
-      .map((item) => ({
-        ...item,
-        percent: item.total / total,
-      }));
+      .map((item) => {
+        const label = item.category?.trim() ? item.category : 'Uncategorized';
+        return {
+          category: label,
+          total: item.total,
+          percent: item.total / total,
+        };
+      });
   }, [summary.byCategory, summary.totalSpent]);
+
+  const pieData = useMemo(
+    () =>
+      summary.byCategory
+        .filter((item) => item.total > 0)
+        .map((item) => ({
+          x: item.category?.trim() ? item.category : 'Uncategorized',
+          y: Number(item.total.toFixed(2)),
+        })),
+    [summary.byCategory],
+  );
+
+  const pieAvailable = Boolean(VictoryPie);
 
   async function saveIncome() {
     const parsed = Number(incomeDraft);
@@ -148,7 +175,7 @@ export default function HomeScreen() {
         <Text style={styles.caption}>Used to calculate your monthly budget.</Text>
       </View>
 
-  <View style={styles.card}>
+      <View style={styles.card}>
         <View style={styles.cardHeader}>
           <Text style={styles.cardTitle}>This month</Text>
           <Text style={styles.cardSubtitle}>
@@ -194,22 +221,43 @@ export default function HomeScreen() {
         {summary.totalSpent === 0 ? (
           <Text style={styles.caption}>Start adding expenses to see category insights.</Text>
         ) : (
-          topCategories.map((item) => (
-            <View style={styles.categoryRow} key={item.category}>
-              <View style={styles.categoryMeta}>
-                <View style={styles.categoryDot} />
-                <Text style={styles.categoryLabel}>{item.category}</Text>
+          <>
+            {!pieAvailable ? (
+              <Text style={styles.caption}>
+                Install `victory-native@36` to view category breakdowns.
+              </Text>
+            ) : pieData.length > 0 ? (
+              <View style={styles.chartContainer}>
+                <VictoryPie
+                  data={pieData}
+                  innerRadius={60}
+                  height={220}
+                  padding={{ top: 16, bottom: 16, left: 16, right: 16 }}
+                  colorScale="qualitative"
+                  labels={({ datum }) => `${datum.x}`}
+                  style={{
+                    labels: { fill: '#e8f0fe', fontSize: 12, fontWeight: '600' },
+                  }}
+                />
               </View>
-              <View style={styles.categoryAmounts}>
-                <Text style={styles.categoryValue}>
-                  {currencyFormatter.format(item.total)}
-                </Text>
-                <Text style={styles.categoryPercent}>
-                  {percentFormatter.format(item.percent)}
-                </Text>
+            ) : null}
+            {topCategories.map((item) => (
+              <View style={styles.categoryRow} key={item.category}>
+                <View style={styles.categoryMeta}>
+                  <View style={styles.categoryDot} />
+                  <Text style={styles.categoryLabel}>{item.category}</Text>
+                </View>
+                <View style={styles.categoryAmounts}>
+                  <Text style={styles.categoryValue}>
+                    {currencyFormatter.format(item.total)}
+                  </Text>
+                  <Text style={styles.categoryPercent}>
+                    {percentFormatter.format(item.percent)}
+                  </Text>
+                </View>
               </View>
-            </View>
-          ))
+            ))}
+          </>
         )}
       </View>
 
@@ -425,6 +473,10 @@ const styles = StyleSheet.create({
   activityAmount: {
     color: '#e8f0fe',
     fontWeight: '600',
+  },
+  chartContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
 

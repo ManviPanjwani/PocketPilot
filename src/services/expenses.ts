@@ -63,6 +63,39 @@ export async function fetchRecentExpenses(max = 20): Promise<Expense[]> {
   return snapshot.docs.map((doc) => ({ id: doc.id, ...(doc.data() as Expense) }));
 }
 
+export async function updateExpense(
+  id: string,
+  updates: Partial<Omit<Expense, 'id' | 'userId' | 'createdAt' | 'createdAtISO'>>,
+) {
+  const user = firebaseAuth.currentUser;
+  if (!user) throw new Error('Not signed in');
+
+  const payload: Record<string, unknown> = {
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+  };
+
+  if (typeof updates.amount === 'number') {
+    payload.amount = updates.amount;
+  }
+
+  if (updates.category !== undefined) {
+    payload.category = updates.category || null;
+  }
+
+  if (updates.note !== undefined) {
+    payload.note = updates.note || null;
+  }
+
+  await db.collection('expenses').doc(id).update(payload);
+}
+
+export async function deleteExpense(id: string) {
+  const user = firebaseAuth.currentUser;
+  if (!user) throw new Error('Not signed in');
+
+  await db.collection('expenses').doc(id).delete();
+}
+
 export function observeRecentExpenses(max = 20, handler: (items: Expense[]) => void) {
   const user = firebaseAuth.currentUser;
   if (!user) {
@@ -86,6 +119,7 @@ export type MonthlySummary = {
   monthlyIncome: number;
   transactions: number;
   byCategory: Array<{ category: string; total: number }>;
+  dailyTotals: Array<{ date: string; total: number }>;
 };
 
 export function observeMonthlySummary(
@@ -100,6 +134,7 @@ export function observeMonthlySummary(
       monthlyIncome,
       transactions: 0,
       byCategory: [],
+      dailyTotals: [],
     });
     return () => {};
   }
@@ -119,6 +154,7 @@ export function observeMonthlySummary(
     .onSnapshot((snapshot) => {
       let total = 0;
       const categoryTotals = new Map<string, number>();
+      const dailyTotals = new Map<string, number>();
 
       snapshot.forEach((doc) => {
         const data = doc.data() as Expense;
@@ -127,6 +163,23 @@ export function observeMonthlySummary(
 
         const key = data.category || 'Uncategorized';
         categoryTotals.set(key, (categoryTotals.get(key) || 0) + amount);
+
+        let dateKey: string | null = null;
+        if (data.createdAt && typeof (data.createdAt as any).toDate === 'function') {
+          try {
+            dateKey = (data.createdAt as any).toDate().toISOString().slice(0, 10);
+          } catch {
+            dateKey = null;
+          }
+        }
+        if (!dateKey && data.createdAtISO) {
+          dateKey = data.createdAtISO.slice(0, 10);
+        }
+        if (!dateKey) {
+          dateKey = new Date().toISOString().slice(0, 10);
+        }
+
+        dailyTotals.set(dateKey, (dailyTotals.get(dateKey) || 0) + amount);
       });
 
       handler({
@@ -138,6 +191,9 @@ export function observeMonthlySummary(
           category,
           total,
         })),
+        dailyTotals: Array.from(dailyTotals.entries())
+          .sort((a, b) => new Date(a[0]).getTime() - new Date(b[0]).getTime())
+          .map(([date, total]) => ({ date, total })),
       });
     });
 }

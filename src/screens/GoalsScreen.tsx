@@ -34,6 +34,7 @@ export default function GoalsScreen() {
     monthlyIncome: 0,
     transactions: 0,
     byCategory: [],
+    dailyTotals: [],
   });
 
   useEffect(() => {
