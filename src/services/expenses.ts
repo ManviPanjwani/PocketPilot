@@ -1,5 +1,6 @@
 import firebase from 'firebase/compat/app';
 import { db, firebaseAuth } from '@/firebase';
+import { logActivity } from '@/services/activity';
 
 export type Expense = {
   id?: string;
@@ -8,6 +9,7 @@ export type Expense = {
   category?: string;
   note?: string;
   createdAt?: any; // Firestore Timestamp
+  createdAtISO?: string;
 };
 
 export async function addExpense(input: Omit<Expense, 'id' | 'userId' | 'createdAt'>) {
@@ -17,6 +19,7 @@ export async function addExpense(input: Omit<Expense, 'id' | 'userId' | 'created
     userId: user.uid,
     amount: input.amount,
     createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+    createdAtISO: new Date().toISOString(),
   };
 
   if (input.category) {
@@ -28,6 +31,22 @@ export async function addExpense(input: Omit<Expense, 'id' | 'userId' | 'created
   }
 
   const docRef = await db.collection('expenses').add(payload);
+
+  try {
+    await logActivity({
+      type: 'expense',
+      referenceId: docRef.id,
+      title: input.note || input.category || 'Expense',
+      amount: input.amount,
+      snapshot: {
+        category: input.category || null,
+        note: input.note || null,
+      },
+    });
+  } catch (err) {
+    console.warn('Failed to log activity', err);
+  }
+
   return docRef.id;
 }
 

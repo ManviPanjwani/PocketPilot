@@ -1,5 +1,6 @@
 import firebase from 'firebase/compat/app';
 import { db, firebaseAuth } from '@/firebase';
+import { logActivity } from '@/services/activity';
 
 export type Goal = {
   id?: string;
@@ -46,6 +47,22 @@ export async function addGoal(input: {
     createdAt: firebase.firestore.FieldValue.serverTimestamp(),
     updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
   });
+  try {
+    await logActivity({
+      type: 'goal',
+      referenceId: doc.id,
+      title: input.title,
+      amount: input.targetAmount,
+      snapshot: {
+        targetAmount: input.targetAmount,
+        category: input.category?.trim() || null,
+        deadline: input.deadline || null,
+      },
+    });
+  } catch (err) {
+    console.warn('Failed to log goal activity', err);
+  }
+
   return doc.id;
 }
 

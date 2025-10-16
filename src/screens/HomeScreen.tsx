@@ -14,6 +14,7 @@ import { firebaseAuth } from '../firebase';
 import { listenAuth, signOutUser } from '../services/auth';
 import { observeMonthlySummary, MonthlySummary } from '@/services/expenses';
 import { observeUserProfile, upsertUserProfile, UserProfile } from '@/services/profile';
+import { observeActivity, ActivityEntry } from '@/services/activity';
 
 const currencyFormatter = new Intl.NumberFormat(undefined, {
   style: 'currency',
@@ -36,6 +37,7 @@ export default function HomeScreen() {
     transactions: 0,
     byCategory: [],
   });
+  const [activity, setActivity] = useState<ActivityEntry[]>([]);
   const [editingIncome, setEditingIncome] = useState(false);
   const [incomeDraft, setIncomeDraft] = useState('');
   const currency = profile?.currency ?? 'USD';
@@ -66,6 +68,11 @@ export default function HomeScreen() {
     const unsubscribe = observeMonthlySummary(income, setSummary);
     return unsubscribe;
   }, [profile?.monthlyIncome]);
+
+  useEffect(() => {
+    const unsubscribe = observeActivity(8, setActivity);
+    return unsubscribe;
+  }, []);
 
   const topCategories = useMemo(() => {
     const total = summary.totalSpent || 1;
@@ -201,6 +208,36 @@ export default function HomeScreen() {
                   {percentFormatter.format(item.percent)}
                 </Text>
               </View>
+            </View>
+          ))
+        )}
+      </View>
+
+      <View style={styles.card}>
+        <View style={styles.cardHeader}>
+          <Text style={styles.cardTitle}>Latest activity</Text>
+        </View>
+        {activity.length === 0 ? (
+          <Text style={styles.caption}>Add expenses or goals to see them here.</Text>
+        ) : (
+          activity.map((entry) => (
+            <View style={styles.activityRow} key={entry.id}>
+              <View style={styles.activityMeta}>
+                <View
+                  style={[
+                    styles.activityDot,
+                    entry.type === 'goal' ? styles.activityDotGoal : styles.activityDotExpense,
+                  ]}
+                />
+                <View>
+                  <Text style={styles.activityTitle}>{entry.title}</Text>
+                  <Text style={styles.activitySubtitle}>{describeActivity(entry)}</Text>
+                </View>
+              </View>
+              <Text style={styles.activityAmount}>
+                {entry.type === 'goal' ? '+' : '-'}
+                {currencyFormatter.format(entry.amount)}
+              </Text>
             </View>
           ))
         )}
@@ -354,4 +391,70 @@ const styles = StyleSheet.create({
     color: '#8aa0b6',
     fontSize: 13,
   },
+  activityRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  activityMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    flex: 1,
+  },
+  activityDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  activityDotExpense: {
+    backgroundColor: '#ff7a74',
+  },
+  activityDotGoal: {
+    backgroundColor: '#4c71ff',
+  },
+  activityTitle: {
+    color: '#e8f0fe',
+    fontWeight: '600',
+  },
+  activitySubtitle: {
+    color: '#8aa0b6',
+    fontSize: 12,
+  },
+  activityAmount: {
+    color: '#e8f0fe',
+    fontWeight: '600',
+  },
 });
+
+function describeActivity(entry: ActivityEntry) {
+  const formatter = new Intl.DateTimeFormat(undefined, {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  });
+
+  let timestampLabel = 'recently';
+  if (entry.createdAt && typeof entry.createdAt.toDate === 'function') {
+    try {
+      timestampLabel = formatter.format(entry.createdAt.toDate());
+    } catch {
+      // ignore
+    }
+  } else if (entry.createdAtISO) {
+    try {
+      timestampLabel = formatter.format(new Date(entry.createdAtISO));
+    } catch {
+      // ignore
+    }
+  }
+
+  if (entry.type === 'goal') {
+    return `Goal created • ${timestampLabel}`;
+  }
+
+  const category = entry.snapshot?.category
+    ? ` • ${String(entry.snapshot?.category)}`
+    : '';
+  return `Expense logged${category} • ${timestampLabel}`;
+}
