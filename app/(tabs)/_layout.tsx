@@ -39,6 +39,13 @@ export default function TabLayout() {
           ),
         }}
       />
+      <Tabs.Screen
+        name="goals"
+        options={{
+          title: 'Goals',
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="target" color={color} />,
+        }}
+      />
     </Tabs>
   );
 }
