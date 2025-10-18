@@ -508,5 +508,10 @@ function describeActivity(entry: ActivityEntry) {
   const category = entry.snapshot?.category
     ? ` • ${String(entry.snapshot?.category)}`
     : '';
-  return `Expense logged${category} • ${timestampLabel}`;
+  const total = entry.snapshot?.totalAmount;
+  const totalText =
+    typeof total === 'number' && total !== entry.amount
+      ? ` (total ${currencyFormatter.format(total)})`
+      : '';
+  return `Expense logged${category}${totalText} • ${timestampLabel}`;
 }

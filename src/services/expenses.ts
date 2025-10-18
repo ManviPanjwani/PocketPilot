@@ -10,6 +10,8 @@ export type Expense = {
   note?: string;
   createdAt?: any; // Firestore Timestamp
   createdAtISO?: string;
+  totalAmount?: number;
+  splits?: Array<{ label: string; amount: number }>;
 };
 
 export async function addExpense(input: Omit<Expense, 'id' | 'userId' | 'createdAt'>) {
@@ -30,6 +32,14 @@ export async function addExpense(input: Omit<Expense, 'id' | 'userId' | 'created
     payload.note = input.note;
   }
 
+  if (typeof input.totalAmount === 'number') {
+    payload.totalAmount = input.totalAmount;
+  }
+
+  if (input.splits) {
+    payload.splits = input.splits;
+  }
+
   const docRef = await db.collection('expenses').add(payload);
 
   try {
@@ -41,6 +51,8 @@ export async function addExpense(input: Omit<Expense, 'id' | 'userId' | 'created
       snapshot: {
         category: input.category || null,
         note: input.note || null,
+        totalAmount: input.totalAmount ?? input.amount,
+        splits: input.splits ?? null,
       },
     });
   } catch (err) {
@@ -84,6 +96,18 @@ export async function updateExpense(
 
   if (updates.note !== undefined) {
     payload.note = updates.note || null;
+  }
+
+  if (updates.totalAmount !== undefined) {
+    payload.totalAmount = updates.totalAmount;
+  }
+
+  if (Array.isArray(updates.splits)) {
+    if (updates.splits.length === 0) {
+      payload.splits = firebase.firestore.FieldValue.delete();
+    } else {
+      payload.splits = updates.splits;
+    }
   }
 
   await db.collection('expenses').doc(id).update(payload);
