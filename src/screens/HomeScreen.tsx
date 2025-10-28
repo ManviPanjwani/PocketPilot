@@ -1,14 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import {
-  Alert,
-  Button,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { Alert, Button, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import { firebaseAuth } from '../firebase';
 import { listenAuth, signOutUser } from '../services/auth';
@@ -19,8 +10,8 @@ import { observeActivity, ActivityEntry } from '@/services/activity';
 let VictoryPie: any;
 
 try {
-  const Victory = require('victory-native');
-  VictoryPie = Victory.VictoryPie;
+  const victoryLib = require('victory-native');
+  VictoryPie = victoryLib.VictoryPie;
 } catch (error) {
   console.warn('Victory charts unavailable, showing summaries only.', error);
 }
@@ -35,6 +26,8 @@ const percentFormatter = new Intl.NumberFormat(undefined, {
   style: 'percent',
   maximumFractionDigits: 1,
 });
+
+const CATEGORY_COLORS = ['#4f46e5', '#10b981', '#f59e0b', '#f97316', '#a855f7', '#14b8a6'];
 
 export default function HomeScreen() {
   const [email, setEmail] = useState<string | null>(firebaseAuth.currentUser?.email ?? null);
@@ -84,32 +77,56 @@ export default function HomeScreen() {
     return unsubscribe;
   }, []);
 
-  const topCategories = useMemo(() => {
-    const total = summary.totalSpent || 1;
-    return summary.byCategory
-      .sort((a, b) => b.total - a.total)
-      .slice(0, 4)
-      .map((item) => {
-        const label = item.category?.trim() ? item.category : 'Uncategorized';
-        return {
-          category: label,
-          total: item.total,
-          percent: item.total / total,
-        };
-      });
+  const categoryEntries = useMemo(() => {
+    if (!summary.byCategory?.length) {
+      return [];
+    }
+
+    const total = summary.totalSpent;
+    const positiveTotals = summary.byCategory
+      .filter((item) => item.total > 0)
+      .sort((a, b) => b.total - a.total);
+
+    if (!positiveTotals.length) {
+      return [];
+    }
+
+    const fallbackTotal = positiveTotals.reduce((acc, next) => acc + next.total, 0);
+    const denominator = total > 0 ? total : fallbackTotal;
+
+    return positiveTotals.map((item, index) => {
+      const label = item.category?.trim() ? item.category : 'Uncategorized';
+      const paletteColor = CATEGORY_COLORS[index % CATEGORY_COLORS.length];
+      const percent = denominator > 0 ? item.total / denominator : 0;
+
+      return {
+        category: label,
+        total: item.total,
+        percent,
+        color: paletteColor,
+      };
+    });
   }, [summary.byCategory, summary.totalSpent]);
+
+  const topCategories = useMemo(() => categoryEntries.slice(0, 4), [categoryEntries]);
 
   const pieData = useMemo(
     () =>
-      summary.byCategory
-        .filter((item) => item.total > 0)
-        .map((item) => ({
-          x: item.category?.trim() ? item.category : 'Uncategorized',
-          y: Number(item.total.toFixed(2)),
-        })),
-    [summary.byCategory],
+      categoryEntries.map((item) => ({
+        x: item.category,
+        y: Number(item.total.toFixed(2)),
+      })),
+    [categoryEntries],
   );
 
+  const pieColors = useMemo(
+    () => categoryEntries.map((item) => item.color),
+    [categoryEntries],
+  );
+
+  const resolvedPieColors = pieColors.length ? pieColors : CATEGORY_COLORS;
+
+  // Whether Victory is available
   const pieAvailable = Boolean(VictoryPie);
 
   async function saveIncome() {
@@ -218,50 +235,68 @@ export default function HomeScreen() {
         <View style={styles.cardHeader}>
           <Text style={styles.cardTitle}>Top categories</Text>
         </View>
-        {summary.totalSpent === 0 ? (
+        {categoryEntries.length === 0 ? (
           <Text style={styles.caption}>Start adding expenses to see category insights.</Text>
         ) : (
-          <>
+          <View style={styles.categoriesSection}>
             {!pieAvailable ? (
               <Text style={styles.caption}>
                 Install `victory-native@36` to view category breakdowns.
               </Text>
-            ) : pieData.length > 0 ? (
+            ) : pieData.length === 0 || !pieData.some((d) => d.y > 0) ? (
+              <Text style={styles.caption}>No category data with positive totals yet.</Text>
+            ) : (
               <View style={styles.chartContainer}>
                 <VictoryPie
                   data={pieData}
+                  colorScale={resolvedPieColors}
+                  width={260}
+                  height={260}
+                  animate={{ duration: 500 }}
                   innerRadius={60}
-                  height={220}
-                  padding={{ top: 16, bottom: 16, left: 16, right: 16 }}
-                  colorScale="qualitative"
-                  labels={({ datum }) => `${datum.x}`}
+                  padAngle={2}
+                  cornerRadius={12}
+                  labels={({ datum }) => `${datum.x}\n${currencyFormatter.format(datum.y)}`}
+                  labelRadius={({ radius }) => radius + 20}
                   style={{
-                    labels: { fill: '#e8f0fe', fontSize: 12, fontWeight: '600' },
+                    data: {
+                      // Force colors by index to ensure visible fills
+                      fill: ({ index }) => resolvedPieColors[index % resolvedPieColors.length],
+                      fillOpacity: 1,
+                      strokeWidth: 0,
+                    },
+                    labels: {
+                      fill: '#e8f0fe',
+                      fontSize: 12,
+                      fontWeight: '600',
+                      textAlign: 'center',
+                    },
                   }}
                 />
               </View>
-            ) : null}
-            {topCategories.map((item) => (
-              <View style={styles.categoryRow} key={item.category}>
-                <View style={styles.categoryMeta}>
-                  <View style={styles.categoryDot} />
-                  <Text style={styles.categoryLabel}>{item.category}</Text>
-                </View>
-                <View style={styles.categoryAmounts}>
+            )}
+
+            <View style={styles.categoryList}>
+              {topCategories.map((item) => (
+                <View style={styles.categoryRow} key={item.category}>
+                  <View style={styles.categoryMeta}>
+                    <View style={[styles.categoryDot, { backgroundColor: item.color }]} />
+                    <View>
+                      <Text style={styles.categoryLabel}>{item.category}</Text>
+                      <Text style={styles.categoryPercent}>
+                        {percentFormatter.format(item.percent)}
+                      </Text>
+                    </View>
+                  </View>
                   <Text style={styles.categoryValue}>
                     {currencyFormatter.format(item.total)}
                   </Text>
-                  <Text style={styles.categoryPercent}>
-                    {percentFormatter.format(item.percent)}
-                  </Text>
                 </View>
-              </View>
-            ))}
-          </>
+              ))}
+            </View>
+          </View>
         )}
-      </View>
 
-      <View style={styles.card}>
         <View style={styles.cardHeader}>
           <Text style={styles.cardTitle}>Latest activity</Text>
         </View>
@@ -407,37 +442,55 @@ const styles = StyleSheet.create({
     color: '#8aa0b6',
     fontSize: 14,
   },
+  categoriesSection: {
+    gap: 24,
+    alignItems: 'stretch',
+  },
+  chartContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    backgroundColor: '#0f1621',
+    borderRadius: 16,
+  },
+  categoryList: {
+    gap: 12,
+  },
   categoryRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 8,
+    backgroundColor: '#101924',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
   },
   categoryMeta: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 10,
   },
   categoryDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: '#4c71ff',
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#4f46e5',
   },
   categoryLabel: {
     color: '#e8f0fe',
     fontSize: 16,
-  },
-  categoryAmounts: {
-    alignItems: 'flex-end',
-  },
-  categoryValue: {
-    color: '#e8f0fe',
     fontWeight: '600',
   },
   categoryPercent: {
     color: '#8aa0b6',
     fontSize: 13,
+    marginTop: 2,
+  },
+  categoryValue: {
+    color: '#e8f0fe',
+    fontSize: 16,
+    fontWeight: '700',
   },
   activityRow: {
     flexDirection: 'row',
@@ -474,10 +527,6 @@ const styles = StyleSheet.create({
     color: '#e8f0fe',
     fontWeight: '600',
   },
-  chartContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
 });
 
 function describeActivity(entry: ActivityEntry) {
@@ -505,9 +554,7 @@ function describeActivity(entry: ActivityEntry) {
     return `Goal created • ${timestampLabel}`;
   }
 
-  const category = entry.snapshot?.category
-    ? ` • ${String(entry.snapshot?.category)}`
-    : '';
+  const category = entry.snapshot?.category ? ` • ${String(entry.snapshot?.category)}` : '';
   const total = entry.snapshot?.totalAmount;
   const totalText =
     typeof total === 'number' && total !== entry.amount
