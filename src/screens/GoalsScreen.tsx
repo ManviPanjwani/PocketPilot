@@ -3,10 +3,12 @@ import {
   Alert,
   Button,
   FlatList,
+  Pressable,
   StyleSheet,
   Text,
   TextInput,
   View,
+  Platform,
 } from 'react-native';
 
 import { Goal, observeGoals, addGoal, deleteGoal } from '@/services/goals';
@@ -19,6 +21,14 @@ const currencyFormatter = new Intl.NumberFormat(undefined, {
   maximumFractionDigits: 2,
 });
 
+const normalizeCategoryLabel = (raw?: string | null, fallback?: string) => {
+  const trimmed = raw?.trim();
+  if (trimmed && trimmed.length) return trimmed;
+  const fallbackTrimmed = fallback?.trim();
+  if (fallbackTrimmed && fallbackTrimmed.length) return fallbackTrimmed;
+  return 'Uncategorized';
+};
+
 export default function GoalsScreen() {
   const [goals, setGoals] = useState<Goal[]>([]);
   const [title, setTitle] = useState('');
@@ -26,6 +36,7 @@ export default function GoalsScreen() {
   const [deadline, setDeadline] = useState('');
   const [category, setCategory] = useState('');
   const [saving, setSaving] = useState(false);
+  const [categoryFilter, setCategoryFilter] = useState<string>('__all');
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [summary, setSummary] = useState<MonthlySummary>({
@@ -53,19 +64,51 @@ export default function GoalsScreen() {
     return unsubscribe;
   }, [profile?.monthlyIncome]);
 
+  const normalizeCategoryLabel = (raw?: string | null, fallback?: string) => {
+    const trimmed = raw?.trim();
+    if (trimmed) return trimmed;
+    const fallbackTrimmed = fallback?.trim();
+    if (fallbackTrimmed) return fallbackTrimmed;
+    return 'Uncategorized';
+  };
+
+  const availableCategories = useMemo(() => {
+    const set = new Set<string>();
+
+    goals.forEach((goal) => {
+      set.add(normalizeCategoryLabel(goal.category, goal.title));
+    });
+
+    summary.byCategory.forEach((entry) => {
+      const trimmed = entry.category?.trim();
+      set.add(trimmed && trimmed.length ? trimmed : 'Uncategorized');
+    });
+
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [goals, summary.byCategory]);
+
+  const filteredGoals = useMemo(() => {
+    if (categoryFilter === '__all') return goals;
+    return goals.filter((goal) => {
+      const label = normalizeCategoryLabel(goal.category, goal.title);
+      return label === categoryFilter;
+    });
+  }, [categoryFilter, goals]);
+
   const upcomingGoals = useMemo(
-    () => goals.filter((goal) => computeSpent(goal, summary) < goal.targetAmount),
-    [goals, summary],
+    () => filteredGoals.filter((goal) => computeSpent(goal, summary) < goal.targetAmount),
+    [filteredGoals, summary],
   );
 
   const completedGoals = useMemo(
-    () => goals.filter((goal) => computeSpent(goal, summary) >= goal.targetAmount),
-    [goals, summary],
+    () => filteredGoals.filter((goal) => computeSpent(goal, summary) >= goal.targetAmount),
+    [filteredGoals, summary],
   );
 
   const listData = useMemo(
     () => [
       { type: 'form' as const, key: 'form' },
+      { type: 'filter' as const, key: 'filter' },
       ...(upcomingGoals.length
         ? [{ type: 'sectionHeader' as const, key: 'upcoming', label: 'Active goals' }]
         : []),
@@ -80,18 +123,29 @@ export default function GoalsScreen() {
 
   async function handleAddGoal() {
     const parsedTarget = Number(target);
-    if (!title.trim() || !Number.isFinite(parsedTarget) || parsedTarget <= 0) {
+    const trimmedTitle = title.trim();
+    if (!trimmedTitle || !Number.isFinite(parsedTarget) || parsedTarget <= 0) {
       Alert.alert('Create goal', 'Enter a name and a positive target amount.');
       return;
+    }
+
+    let normalizedCategory = category.trim();
+    if (!normalizedCategory && trimmedTitle) {
+      const match = availableCategories.find(
+        (cat) => cat.toLowerCase() === trimmedTitle.toLowerCase(),
+      );
+      if (match) {
+        normalizedCategory = match === 'Uncategorized' ? '' : match;
+      }
     }
 
     setSaving(true);
     try {
       await addGoal({
-        title: title.trim(),
+        title: trimmedTitle,
         targetAmount: parsedTarget,
         deadline: deadline.trim() || undefined,
-        category: category.trim() || undefined,
+        category: normalizedCategory || undefined,
       });
       setTitle('');
       setTarget('');
@@ -105,25 +159,34 @@ export default function GoalsScreen() {
     }
   }
 
-  function confirmDelete(goal: Goal) {
-    Alert.alert(
-      'Delete goal',
-      `Are you sure you want to delete “${goal.title}”?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteGoal(goal.id!);
-            } catch (error: any) {
-              Alert.alert('Delete goal', error?.message ?? 'Unable to delete this goal.');
-            }
-          },
-        },
-      ],
-    );
+  function nativeConfirm(title: string, message: string): Promise<boolean> {
+    if (Platform.OS === 'web') {
+      const yes = typeof window !== 'undefined' ? window.confirm(message) : true;
+      return Promise.resolve(yes);
+    }
+    return new Promise((resolve) => {
+      Alert.alert(title, message, [
+        { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+        { text: 'Delete', style: 'destructive', onPress: () => resolve(true) },
+      ]);
+    });
+  }
+
+  async function confirmDelete(goal: Goal) {
+    if (!goal.id) {
+      Alert.alert('Delete goal', 'Missing goal id. Please refresh and try again.');
+      return;
+    }
+    const ok = await nativeConfirm('Delete goal', `Are you sure you want to delete “${goal.title}”?`);
+    if (!ok) return;
+    try {
+      console.log('Deleting goal', goal.id);
+      await deleteGoal(goal.id);
+      Alert.alert('Delete goal', 'Goal deleted.');
+    } catch (error: any) {
+      console.error('Delete goal error', error);
+      Alert.alert('Delete goal', error?.message ?? 'Unable to delete this goal.');
+    }
   }
 
   function renderItem({ item }: { item: (typeof listData)[number] }) {
@@ -150,6 +213,21 @@ export default function GoalsScreen() {
             onChangeText={setCategory}
             style={styles.input}
           />
+          {availableCategories.length ? (
+            <View style={styles.suggestionRow}>
+              <Text style={styles.caption}>Tap to fill:</Text>
+              <View style={styles.filterRow}>
+                {availableCategories.map((cat, idx) => (
+                  <Pressable
+                    key={`suggest-${idx}-${cat}`}
+                    style={styles.filterChip}
+                    onPress={() => setCategory(cat === 'Uncategorized' ? '' : cat)}>
+                    <Text style={styles.filterChipText}>{cat}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+          ) : null}
           <TextInput
             placeholder="Deadline (optional)"
             value={deadline}
@@ -169,11 +247,53 @@ export default function GoalsScreen() {
       );
     }
 
+    if (item.type === 'filter') {
+      return (
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Filter by category</Text>
+          <View style={styles.filterRow}>
+            <Pressable
+              style={[styles.filterChip, categoryFilter === '__all' && styles.filterChipSelected]}
+              onPress={() => setCategoryFilter('__all')}>
+              <Text
+                style={[
+                  styles.filterChipText,
+                  categoryFilter === '__all' && styles.filterChipTextSelected,
+                ]}>
+                All
+              </Text>
+            </Pressable>
+            {availableCategories.map((cat, idx) => (
+              <Pressable
+                key={`filter-${idx}-${cat}`}
+                style={[
+                  styles.filterChip,
+                  categoryFilter === cat && styles.filterChipSelected,
+                ]}
+                onPress={() => setCategoryFilter(cat)}>
+                <Text
+                  style={[
+                    styles.filterChipText,
+                    categoryFilter === cat && styles.filterChipTextSelected,
+                  ]}>
+                  {cat}
+                </Text>
+              </Pressable>
+            ))}
+            {availableCategories.length === 0 ? (
+              <Text style={styles.caption}>Add goals with categories to filter.</Text>
+            ) : null}
+          </View>
+        </View>
+      );
+    }
+
     if (item.type === 'sectionHeader') {
       return <Text style={styles.sectionHeader}>{item.label}</Text>;
     }
 
     const goal = item.goal;
+    const categoryLabel = normalizeCategoryLabel(goal.category, goal.title);
     const spent = computeSpent(goal, summary);
     const progress = goal.targetAmount > 0 ? Math.min(spent / goal.targetAmount, 1) : 0;
     const remaining = Math.max(goal.targetAmount - spent, 0);
@@ -184,7 +304,9 @@ export default function GoalsScreen() {
           <View>
             <Text style={styles.goalTitle}>{goal.title}</Text>
             <Text style={styles.goalMeta}>
-              Tracking {goal.category ? `"${goal.category}"` : 'all spending this month'}
+              {categoryLabel === 'Uncategorized'
+                ? 'Tracking uncategorized spending this month'
+                : `Tracking "${categoryLabel}" spending this month`}
             </Text>
             {goal.deadline ? (
               <Text style={styles.goalDeadline}>By {goal.deadline}</Text>
@@ -295,14 +417,60 @@ const styles = StyleSheet.create({
     color: '#8aa0b6',
     fontSize: 14,
   },
+  filterRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  filterChip: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#1f2a36',
+    backgroundColor: '#101721',
+  },
+  filterChipSelected: {
+    borderColor: '#4c71ff',
+    backgroundColor: 'rgba(76, 113, 255, 0.15)',
+  },
+  filterChipText: {
+    color: '#8aa0b6',
+    fontWeight: '500',
+  },
+  filterChipTextSelected: {
+    color: '#e8f0fe',
+  },
+  suggestionRow: {
+    gap: 8,
+  },
 });
 
 function computeSpent(goal: Goal, summary: MonthlySummary) {
-  if (goal.category) {
-    const match = summary.byCategory.find(
-      (item) => item.category.toLowerCase() === goal.category?.toLowerCase(),
-    );
-    return match ? match.total : 0;
+  const categoryLabel = normalizeCategoryLabel(goal.category, goal.title);
+  const hasCategoryValue = Boolean(goal.category && goal.category.trim());
+  const hasTitleValue = Boolean(goal.title && goal.title.trim());
+
+  if (!hasCategoryValue && !hasTitleValue) {
+    return summary.totalSpent;
   }
-  return summary.totalSpent;
+
+  if (categoryLabel === 'Uncategorized') {
+    const uncategorized = summary.byCategory.find((item) => !item.category || !item.category.trim());
+    if (uncategorized) {
+      return uncategorized.total;
+    }
+    return hasCategoryValue ? 0 : summary.totalSpent;
+  }
+
+  const match = summary.byCategory.find((item) => {
+    const itemLabel = item.category?.trim();
+    return itemLabel && itemLabel.toLowerCase() === categoryLabel.toLowerCase();
+  });
+
+  if (!match) {
+    return hasCategoryValue ? 0 : summary.totalSpent;
+  }
+
+  return match.total;
 }

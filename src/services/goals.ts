@@ -21,8 +21,9 @@ export function observeGoals(handler: (goals: Goal[]) => void) {
   }
 
   return db
+    .collection('users')
+    .doc(user.uid)
     .collection('goals')
-    .where('userId', '==', user.uid)
     .orderBy('createdAt', 'desc')
     .onSnapshot((snapshot) => {
       handler(snapshot.docs.map((doc) => ({ id: doc.id, ...(doc.data() as Goal) })));
@@ -38,7 +39,11 @@ export async function addGoal(input: {
   const user = firebaseAuth.currentUser;
   if (!user) throw new Error('Not signed in');
 
-  const doc = await db.collection('goals').add({
+  const doc = await db
+    .collection('users')
+    .doc(user.uid)
+    .collection('goals')
+    .add({
     userId: user.uid,
     title: input.title,
     targetAmount: input.targetAmount,
@@ -70,5 +75,18 @@ export async function deleteGoal(goalId: string) {
   const user = firebaseAuth.currentUser;
   if (!user) throw new Error('Not signed in');
 
-  await db.collection('goals').doc(goalId).delete();
+  const ref = db
+    .collection('users')
+    .doc(user.uid)
+    .collection('goals')
+    .doc(goalId);
+  const snap = await ref.get();
+  if (!snap.exists) {
+    throw new Error('Goal not found');
+  }
+  const data = snap.data() as Goal;
+  if (data.userId !== user.uid) {
+    throw new Error('You do not have permission to delete this goal');
+  }
+  await ref.delete();
 }
