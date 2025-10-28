@@ -1,11 +1,14 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Alert, Button, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import { firebaseAuth } from '../firebase';
 import { listenAuth, signOutUser } from '../services/auth';
 import { observeMonthlySummary, MonthlySummary } from '@/services/expenses';
 import { observeUserProfile, upsertUserProfile, UserProfile } from '@/services/profile';
 import { observeActivity, ActivityEntry } from '@/services/activity';
+import { AppButton } from '@/components/ui/AppButton';
+import { palette, cardShadow } from '@/styles/palette';
+import { Fonts } from '@/constants/theme';
 
 let VictoryPie: any;
 
@@ -43,6 +46,7 @@ export default function HomeScreen() {
   const [activity, setActivity] = useState<ActivityEntry[]>([]);
   const [editingIncome, setEditingIncome] = useState(false);
   const [incomeDraft, setIncomeDraft] = useState('');
+  const [savingIncome, setSavingIncome] = useState(false);
   const currency = profile?.currency ?? 'USD';
 
   const formattedIncome = useMemo(() => {
@@ -130,6 +134,8 @@ export default function HomeScreen() {
   const pieAvailable = Boolean(VictoryPie);
 
   async function saveIncome() {
+    if (savingIncome) return;
+
     const parsed = Number(incomeDraft);
     if (!Number.isFinite(parsed) || parsed <= 0) {
       Alert.alert('Monthly income', 'Enter a positive number before saving.');
@@ -137,11 +143,14 @@ export default function HomeScreen() {
     }
 
     try {
+      setSavingIncome(true);
       await upsertUserProfile({ monthlyIncome: parsed, currency });
       setEditingIncome(false);
       Alert.alert('Monthly income', 'Income updated successfully.');
     } catch (error: any) {
       Alert.alert('Monthly income', error?.message ?? 'Unable to update income.');
+    } finally {
+      setSavingIncome(false);
     }
   }
 
@@ -161,6 +170,25 @@ export default function HomeScreen() {
         <TouchableOpacity onPress={signOutUser} style={styles.logoutButton}>
           <Text style={styles.logoutText}>Logout</Text>
         </TouchableOpacity>
+      </View>
+
+      <View style={styles.heroCard}>
+        <View style={styles.heroContent}>
+          <View>
+            <Text style={styles.heroLabel}>Remaining budget</Text>
+            <Text style={styles.heroValue}>
+              {currencyFormatter.format(summary.remainingBudget)}
+            </Text>
+          </View>
+          <View style={styles.heroBadge}>
+            <Text style={styles.heroBadgeText}>
+              {percentFormatter.format(spendRatio)} spent
+            </Text>
+          </View>
+        </View>
+        <Text style={styles.heroHint}>
+          Keep logging expenses to stay on track this month.
+        </Text>
       </View>
 
       <View style={styles.card}>
@@ -184,7 +212,12 @@ export default function HomeScreen() {
               keyboardType="decimal-pad"
               style={styles.input}
             />
-            <Button title="Save income" onPress={saveIncome} />
+            <AppButton
+              label="Save income"
+              onPress={saveIncome}
+              loading={savingIncome}
+              disabled={savingIncome}
+            />
           </>
         ) : (
           <Text style={styles.highlightValue}>{formattedIncome}</Text>
@@ -332,12 +365,12 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0b0f14',
+    backgroundColor: palette.background,
   },
   content: {
-    padding: 20,
-    paddingBottom: 40,
-    gap: 20,
+    padding: 24,
+    paddingBottom: 64,
+    gap: 24,
   },
   header: {
     flexDirection: 'row',
@@ -345,31 +378,76 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   greeting: {
-    color: '#8aa0b6',
+    color: palette.textSecondary,
     fontSize: 16,
+    fontFamily: Fonts.rounded,
+    letterSpacing: 0.2,
   },
   email: {
-    color: '#e8f0fe',
-    fontSize: 20,
-    fontWeight: '600',
+    color: palette.textPrimary,
+    fontSize: 22,
+    fontWeight: '700',
   },
   logoutButton: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 18,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: '#1f2a36',
-    backgroundColor: '#111822',
+    borderColor: palette.border,
+    backgroundColor: palette.surface,
   },
   logoutText: {
-    color: '#8aa0b6',
+    color: palette.textPrimary,
     fontWeight: '600',
   },
-  card: {
-    backgroundColor: '#111822',
-    borderRadius: 16,
-    padding: 20,
+  heroCard: {
+    backgroundColor: palette.surface,
+    borderRadius: 24,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: palette.border,
     gap: 12,
+    ...cardShadow,
+  },
+  heroContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  heroLabel: {
+    color: palette.textMuted,
+    fontSize: 13,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+  },
+  heroValue: {
+    color: palette.textPrimary,
+    fontSize: 34,
+    fontWeight: '700',
+  },
+  heroBadge: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 999,
+    backgroundColor: palette.accentMuted,
+  },
+  heroBadgeText: {
+    color: palette.accentBright,
+    fontWeight: '600',
+  },
+  heroHint: {
+    color: palette.textSecondary,
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  card: {
+    backgroundColor: palette.surface,
+    borderRadius: 24,
+    padding: 24,
+    gap: 16,
+    borderWidth: 1,
+    borderColor: palette.border,
+    ...cardShadow,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -377,118 +455,124 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   cardTitle: {
-    color: '#e8f0fe',
+    color: palette.textPrimary,
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   cardSubtitle: {
-    color: '#8aa0b6',
+    color: palette.textMuted,
     fontSize: 14,
   },
   caption: {
-    color: '#8aa0b6',
+    color: palette.textSecondary,
     fontSize: 14,
+    lineHeight: 20,
   },
   editLink: {
-    color: '#4c71ff',
+    color: palette.accentBright,
     fontWeight: '600',
   },
   highlightValue: {
-    color: '#e8f0fe',
+    color: palette.textPrimary,
     fontSize: 32,
     fontWeight: '700',
   },
   input: {
-    backgroundColor: '#0b0f14',
-    borderRadius: 8,
-    padding: 12,
-    color: '#e8f0fe',
+    backgroundColor: palette.backgroundAlt,
+    borderRadius: 12,
+    padding: 14,
+    color: palette.textPrimary,
     borderWidth: 1,
-    borderColor: '#1f2a36',
+    borderColor: palette.border,
   },
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    gap: 16,
+    gap: 18,
   },
   rowItem: {
     flex: 1,
+    gap: 6,
   },
   metricLabel: {
-    color: '#8aa0b6',
-    fontSize: 14,
+    color: palette.textMuted,
+    fontSize: 13,
+    letterSpacing: 0.3,
+    textTransform: 'uppercase',
   },
   metricValue: {
-    color: '#e8f0fe',
+    color: palette.textPrimary,
     fontSize: 24,
     fontWeight: '700',
-    marginTop: 4,
   },
   progressWrapper: {
-    gap: 8,
+    gap: 10,
   },
   progressTrack: {
-    backgroundColor: '#1f2a36',
-    height: 10,
+    backgroundColor: palette.accentMuted,
+    height: 12,
     borderRadius: 999,
     overflow: 'hidden',
   },
   progressFill: {
-    backgroundColor: '#4c71ff',
+    backgroundColor: palette.accent,
     height: '100%',
     borderRadius: 999,
   },
   progressCaption: {
-    color: '#8aa0b6',
+    color: palette.textSecondary,
     fontSize: 14,
   },
   categoriesSection: {
     gap: 24,
-    alignItems: 'stretch',
   },
   chartContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    backgroundColor: '#0f1621',
-    borderRadius: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 12,
+    backgroundColor: palette.surfaceElevated,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: palette.border,
   },
   categoryList: {
-    gap: 12,
+    gap: 14,
   },
   categoryRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#101924',
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+    backgroundColor: palette.surfaceElevated,
+    borderRadius: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 18,
+    borderWidth: 1,
+    borderColor: palette.border,
   },
   categoryMeta: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 12,
   },
   categoryDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: '#4f46e5',
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: palette.accent,
   },
   categoryLabel: {
-    color: '#e8f0fe',
+    color: palette.textPrimary,
     fontSize: 16,
     fontWeight: '600',
   },
   categoryPercent: {
-    color: '#8aa0b6',
+    color: palette.textSecondary,
     fontSize: 13,
     marginTop: 2,
   },
   categoryValue: {
-    color: '#e8f0fe',
+    color: palette.textPrimary,
     fontSize: 16,
     fontWeight: '700',
   },
@@ -496,12 +580,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 8,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: palette.surfaceMuted,
   },
   activityMeta: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 12,
     flex: 1,
   },
   activityDot: {
@@ -510,21 +596,21 @@ const styles = StyleSheet.create({
     borderRadius: 5,
   },
   activityDotExpense: {
-    backgroundColor: '#ff7a74',
+    backgroundColor: palette.danger,
   },
   activityDotGoal: {
-    backgroundColor: '#4c71ff',
+    backgroundColor: palette.accent,
   },
   activityTitle: {
-    color: '#e8f0fe',
+    color: palette.textPrimary,
     fontWeight: '600',
   },
   activitySubtitle: {
-    color: '#8aa0b6',
+    color: palette.textSecondary,
     fontSize: 12,
   },
   activityAmount: {
-    color: '#e8f0fe',
+    color: palette.textPrimary,
     fontWeight: '600',
   },
 });

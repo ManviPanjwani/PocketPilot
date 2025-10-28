@@ -9,6 +9,9 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import LoginScreen from '@/src/screens/LoginScreen';
 import { listenAuth } from '@/src/services/auth';
 import { firebaseAuth } from '@/src/firebase';
+import { AssistantProvider } from '@/assistant/AssistantContext';
+import { AssistantOverlay } from '@/components/assistant/AssistantOverlay';
+import { AssistantFab } from '@/components/assistant/AssistantFab';
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -47,22 +50,26 @@ export default function RootLayout() {
     );
   }
 
-  if (!authed) {
-    return (
-      <ThemeProvider value={theme}>
-        <StatusBar style="light" />
-        <LoginScreen />
-      </ThemeProvider>
-    );
-  }
-
   return (
-    <ThemeProvider value={theme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-      </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
+    <AssistantProvider enabled={authed}>
+      <ThemeProvider value={theme}>
+        {authed ? (
+          <>
+            <Stack>
+              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+              <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+            </Stack>
+            <StatusBar style="auto" />
+          </>
+        ) : (
+          <>
+            <StatusBar style="light" />
+            <LoginScreen />
+          </>
+        )}
+        <AssistantOverlay />
+        <AssistantFab />
+      </ThemeProvider>
+    </AssistantProvider>
   );
 }

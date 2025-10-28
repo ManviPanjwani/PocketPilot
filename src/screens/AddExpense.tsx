@@ -1,7 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import {
   Alert,
-  Button,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -13,6 +12,9 @@ import {
 } from 'react-native';
 
 import { addExpense } from '@/services/expenses';
+import { AppButton } from '@/components/ui/AppButton';
+import { palette, cardShadow } from '@/styles/palette';
+import { Fonts } from '@/constants/theme';
 
 const formatAmount = (value: number) => (Number.isFinite(value) ? value.toFixed(2) : '0.00');
 
@@ -353,71 +355,94 @@ export default function AddExpense() {
           multiline
         />
 
-        <Button title={busy ? 'Saving…' : 'Save expense'} onPress={validateAndSave} disabled={busy} />
+        <AppButton
+          label="Save expense"
+          onPress={validateAndSave}
+          loading={busy}
+          disabled={busy}
+        />
       </View>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0b0f14' },
-  content: { padding: 24, paddingBottom: 40 },
-  form: { flex: 1, gap: 12 },
-  heading: { color: '#e8f0fe', fontSize: 24, fontWeight: '700', marginBottom: 4 },
-  label: { color: '#8aa0b6', fontSize: 14 },
+  container: { flex: 1, backgroundColor: palette.background },
+  content: { padding: 24, paddingBottom: 64 },
+  form: { flex: 1, gap: 18 },
+  heading: {
+    color: palette.textPrimary,
+    fontSize: 26,
+    fontWeight: '700',
+    fontFamily: Fonts.rounded,
+    marginBottom: 8,
+  },
+  label: {
+    color: palette.textMuted,
+    fontSize: 14,
+    letterSpacing: 0.2,
+  },
   input: {
-    backgroundColor: '#111822',
-    color: '#e8f0fe',
-    padding: 12,
-    borderRadius: 8,
+    backgroundColor: palette.surface,
+    color: palette.textPrimary,
+    padding: 14,
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#1f2a36',
+    borderColor: palette.border,
   },
   multiline: {
-    height: 90,
+    height: 110,
     textAlignVertical: 'top',
   },
   quickRow: {
-    gap: 6,
+    gap: 8,
   },
   quickLabel: {
-    color: '#8aa0b6',
+    color: palette.textSecondary,
+    fontWeight: '600',
+    fontSize: 13,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
   },
   quickChips: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: 10,
   },
   chip: {
-    borderRadius: 16,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    backgroundColor: '#111822',
+    borderRadius: 18,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    backgroundColor: palette.surface,
     borderWidth: 1,
-    borderColor: '#1f2a36',
+    borderColor: palette.border,
   },
   chipSelected: {
-    backgroundColor: '#2b3a4a',
-    borderColor: '#4c71ff',
+    backgroundColor: palette.accentMuted,
+    borderColor: palette.accentBright,
   },
   chipText: {
-    color: '#8aa0b6',
-    fontWeight: '500',
+    color: palette.textSecondary,
+    fontWeight: '600',
   },
   chipTextSelected: {
-    color: '#e8f0fe',
+    color: palette.textPrimary,
   },
   splitToggleRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginTop: 8,
+    paddingVertical: 6,
   },
   participantCard: {
-    backgroundColor: '#111822',
-    borderRadius: 12,
-    padding: 16,
-    gap: 8,
+    backgroundColor: palette.surfaceElevated,
+    borderRadius: 18,
+    padding: 18,
+    gap: 10,
+    borderWidth: 1,
+    borderColor: palette.border,
+    ...cardShadow,
   },
   participantHeader: {
     flexDirection: 'row',
@@ -425,102 +450,100 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   participantTitle: {
-    color: '#e8f0fe',
+    color: palette.textPrimary,
     fontWeight: '600',
+    fontSize: 15,
   },
   removeParticipant: {
-    color: '#ff6b6b',
+    color: palette.danger,
     fontWeight: '600',
   },
   equalButton: {
     alignSelf: 'flex-start',
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    backgroundColor: '#1f2a36',
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    backgroundColor: palette.accentMuted,
     borderRadius: 999,
   },
   equalText: {
-    color: '#4c71ff',
+    color: palette.accentBright,
     fontWeight: '600',
   },
   addParticipantButton: {
     paddingVertical: 8,
   },
   addParticipantText: {
-    color: '#4c71ff',
+    color: palette.accentBright,
     fontWeight: '600',
   },
   differenceBanner: {
-    borderRadius: 10,
-    padding: 12,
+    borderRadius: 14,
+    padding: 14,
+    borderWidth: 1,
   },
   differenceWarning: {
-    backgroundColor: 'rgba(255, 107, 107, 0.15)',
-    borderColor: '#ff6b6b',
-    borderWidth: 1,
+    backgroundColor: 'rgba(248, 113, 113, 0.15)',
+    borderColor: palette.danger,
   },
   differenceResolved: {
-    backgroundColor: 'rgba(76, 113, 255, 0.15)',
-    borderColor: '#4c71ff',
-    borderWidth: 1,
+    backgroundColor: palette.accentMuted,
+    borderColor: palette.accentBright,
   },
   differenceText: {
-    color: '#e8f0fe',
+    color: palette.textPrimary,
     fontSize: 13,
   },
   readOnlyField: {
     justifyContent: 'center',
+    backgroundColor: palette.backgroundAlt,
+    borderWidth: 1,
+    borderColor: palette.border,
+    borderRadius: 12,
+    padding: 14,
   },
   readOnlyText: {
-    color: '#8aa0b6',
-  },
-  splitHint: {
-    color: '#8aa0b6',
-    fontSize: 13,
-  },
-  totalLabel: {
-    color: '#e8f0fe',
+    color: palette.textSecondary,
     fontWeight: '600',
   },
   dropdown: {
-    backgroundColor: '#111822',
-    paddingHorizontal: 12,
-    paddingVertical: 14,
-    borderRadius: 8,
+    backgroundColor: palette.surface,
+    paddingHorizontal: 14,
+    paddingVertical: 16,
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#1f2a36',
+    borderColor: palette.border,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
   dropdownValue: {
-    color: '#e8f0fe',
+    color: palette.textPrimary,
   },
   dropdownCaret: {
-    color: '#4c71ff',
+    color: palette.accentBright,
     fontSize: 12,
   },
   dropdownList: {
-    backgroundColor: '#101721',
-    borderRadius: 8,
+    backgroundColor: palette.surfaceElevated,
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#1f2a36',
-    overflow: 'hidden',
+    borderColor: palette.border,
+    marginTop: 8,
   },
   dropdownItem: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 18,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#1f2a36',
+    borderBottomColor: palette.surfaceMuted,
   },
   dropdownItemSelected: {
-    backgroundColor: '#1c2836',
+    backgroundColor: palette.accentMuted,
   },
   dropdownItemText: {
-    color: '#8aa0b6',
+    color: palette.textSecondary,
   },
   dropdownItemTextSelected: {
-    color: '#e8f0fe',
+    color: palette.textPrimary,
     fontWeight: '600',
   },
 });

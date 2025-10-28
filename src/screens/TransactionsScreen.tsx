@@ -3,6 +3,7 @@ import {
   Alert,
   FlatList,
   Modal,
+  Platform,
   StyleSheet,
   Switch,
   Text,
@@ -17,6 +18,9 @@ import {
   updateExpense,
   deleteExpense,
 } from '@/services/expenses';
+import { AppButton } from '@/components/ui/AppButton';
+import { palette, cardShadow } from '@/styles/palette';
+import { Fonts } from '@/constants/theme';
 
 const formatAmount = (value: number) => (Number.isFinite(value) ? value.toFixed(2) : '0.00');
 
@@ -215,25 +219,38 @@ export default function TransactionsScreen() {
   }
 
   function confirmDelete(expense: Expense) {
-    if (!expense.id) return;
-    Alert.alert(
-      'Delete transaction',
-      'Are you sure you want to remove this expense?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteExpense(expense.id!);
-            } catch (error: any) {
-              Alert.alert('Delete transaction', error?.message ?? 'Unable to delete expense.');
-            }
-          },
+    if (!expense.id) {
+      Alert.alert('Delete transaction', 'Missing expense id. Refresh and try again.');
+      return;
+    }
+
+    if (Platform.OS === 'web') {
+      const shouldDelete =
+        typeof window !== 'undefined'
+          ? window.confirm('Delete this expense?')
+          : true;
+      if (shouldDelete) {
+        deleteExpense(expense.id).catch((error) => {
+          Alert.alert('Delete transaction', error?.message ?? 'Unable to delete expense.');
+        });
+      }
+      return;
+    }
+
+    Alert.alert('Delete transaction', 'Are you sure you want to remove this expense?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await deleteExpense(expense.id!);
+          } catch (error: any) {
+            Alert.alert('Delete transaction', error?.message ?? 'Unable to delete expense.');
+          }
         },
-      ],
-    );
+      },
+    ]);
   }
 
   return (
@@ -242,7 +259,7 @@ export default function TransactionsScreen() {
       <FlatList
         data={items}
         keyExtractor={(item) => item.id!}
-        ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
+        ItemSeparatorComponent={() => <View style={{ height: 16 }} />}
         renderItem={({ item }) => (
           <View style={styles.card}>
             <Text style={styles.rowTop}>${item.amount.toFixed(2)}</Text>
@@ -366,17 +383,20 @@ export default function TransactionsScreen() {
             />
 
             <View style={styles.modalActions}>
-              <TouchableOpacity style={styles.modalButton} onPress={closeModal} disabled={saving}>
-                <Text style={styles.modalButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.modalPrimaryButton]}
+              <AppButton
+                label="Cancel"
+                variant="secondary"
+                onPress={closeModal}
+                disabled={saving}
+                style={styles.modalActionButton}
+              />
+              <AppButton
+                label="Save"
                 onPress={handleSave}
-                disabled={saving}>
-                <Text style={[styles.modalButtonText, styles.modalPrimaryButtonText]}>
-                  {saving ? 'Saving…' : 'Save'}
-                </Text>
-              </TouchableOpacity>
+                loading={saving}
+                disabled={saving}
+                style={[styles.modalActionButton, styles.modalPrimaryAction]}
+              />
             </View>
           </View>
         </View>
@@ -386,75 +406,92 @@ export default function TransactionsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0b0f14', padding: 16 },
-  title: { color: '#e8f0fe', fontSize: 22, marginBottom: 12 },
-  card: { backgroundColor: '#111822', borderRadius: 10, padding: 12 },
-  rowTop: { color: '#e8f0fe', fontSize: 18, fontWeight: '600' },
-  rowSub: { color: '#8aa0b6', marginTop: 4 },
-  timestamp: { color: '#5f7087', marginTop: 2, fontSize: 13 },
-  note: { color: '#b7c7d9', marginTop: 4, fontStyle: 'italic' },
-  empty: { color: '#8aa0b6', marginTop: 24, textAlign: 'center' },
+  container: { flex: 1, backgroundColor: palette.background, padding: 24 },
+  title: {
+    color: palette.textPrimary,
+    fontSize: 24,
+    fontWeight: '700',
+    fontFamily: Fonts.rounded,
+    marginBottom: 16,
+  },
+  card: {
+    backgroundColor: palette.surface,
+    borderRadius: 20,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: palette.border,
+    gap: 12,
+    ...cardShadow,
+  },
+  rowTop: { color: palette.textPrimary, fontSize: 20, fontWeight: '700' },
+  rowSub: { color: palette.textSecondary, marginTop: 4 },
+  timestamp: { color: palette.textMuted, marginTop: 2, fontSize: 13 },
+  note: { color: palette.textSecondary, marginTop: 8, fontStyle: 'italic' },
+  empty: { color: palette.textSecondary, marginTop: 32, textAlign: 'center' },
   actionsRow: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
     gap: 16,
-    marginTop: 12,
+    marginTop: 16,
   },
   actionButton: {
-    color: '#4c71ff',
+    color: palette.accentBright,
     fontWeight: '600',
   },
   deleteButton: {
-    color: '#ff6b6b',
+    color: palette.danger,
   },
   splitSummary: {
-    marginTop: 10,
-    paddingTop: 8,
+    marginTop: 12,
+    paddingTop: 10,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: '#1f2a36',
-    gap: 4,
+    borderTopColor: palette.surfaceMuted,
+    gap: 6,
   },
   splitTotal: {
-    color: '#e8f0fe',
+    color: palette.textPrimary,
     fontWeight: '600',
   },
   splitLine: {
-    color: '#8aa0b6',
+    color: palette.textSecondary,
     fontSize: 13,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(4, 11, 24, 0.82)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: 24,
   },
   modalCard: {
     width: '100%',
-    backgroundColor: '#111822',
-    borderRadius: 16,
-    padding: 20,
+    backgroundColor: palette.surface,
+    borderRadius: 24,
+    padding: 24,
     gap: 16,
+    borderWidth: 1,
+    borderColor: palette.border,
+    ...cardShadow,
   },
   modalTitle: {
-    color: '#e8f0fe',
-    fontSize: 18,
-    fontWeight: '600',
+    color: palette.textPrimary,
+    fontSize: 20,
+    fontWeight: '700',
   },
   modalLabel: {
-    color: '#8aa0b6',
+    color: palette.textSecondary,
     fontSize: 14,
   },
   modalInput: {
-    backgroundColor: '#0b0f14',
-    borderRadius: 8,
-    padding: 12,
-    color: '#e8f0fe',
+    backgroundColor: palette.surfaceElevated,
+    borderRadius: 14,
+    padding: 14,
+    color: palette.textPrimary,
     borderWidth: 1,
-    borderColor: '#1f2a36',
+    borderColor: palette.border,
   },
   modalTextarea: {
-    height: 90,
+    height: 100,
     textAlignVertical: 'top',
   },
   modalSplitRow: {
@@ -463,10 +500,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   participantCard: {
-    backgroundColor: '#111822',
-    borderRadius: 12,
+    backgroundColor: palette.surfaceElevated,
+    borderRadius: 16,
     padding: 16,
-    gap: 8,
+    gap: 10,
+    borderWidth: 1,
+    borderColor: palette.border,
   },
   participantHeader: {
     flexDirection: 'row',
@@ -474,59 +513,45 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   participantTitle: {
-    color: '#e8f0fe',
+    color: palette.textPrimary,
     fontWeight: '600',
   },
   removeParticipant: {
-    color: '#ff6b6b',
+    color: palette.danger,
     fontWeight: '600',
   },
   addParticipantButton: {
     paddingVertical: 8,
   },
   addParticipantText: {
-    color: '#4c71ff',
+    color: palette.accentBright,
     fontWeight: '600',
   },
   differenceBanner: {
-    borderRadius: 10,
-    padding: 12,
+    borderRadius: 14,
+    padding: 14,
+    borderWidth: 1,
   },
   differenceWarning: {
-    backgroundColor: 'rgba(255, 107, 107, 0.15)',
-    borderColor: '#ff6b6b',
-    borderWidth: 1,
+    backgroundColor: 'rgba(248, 113, 113, 0.16)',
+    borderColor: palette.danger,
   },
   differenceResolved: {
-    backgroundColor: 'rgba(76, 113, 255, 0.15)',
-    borderColor: '#4c71ff',
-    borderWidth: 1,
+    backgroundColor: palette.accentMuted,
+    borderColor: palette.accentBright,
   },
   differenceText: {
-    color: '#e8f0fe',
+    color: palette.textPrimary,
     fontSize: 13,
   },
   modalActions: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
     gap: 12,
   },
-  modalButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    backgroundColor: '#1f2a36',
+  modalActionButton: {
+    flex: 1,
   },
-  modalPrimaryButton: {
-    backgroundColor: '#4c71ff',
-  },
-  modalButtonText: {
-    color: '#e8f0fe',
-    fontWeight: '600',
-  },
-  modalPrimaryButtonText: {
-    color: '#ffffff',
-  },
+  modalPrimaryAction: {},
 });
 
 function formatTimestamp(item: Expense, formatter: Intl.DateTimeFormat) {

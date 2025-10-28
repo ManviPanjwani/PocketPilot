@@ -117,7 +117,16 @@ export async function deleteExpense(id: string) {
   const user = firebaseAuth.currentUser;
   if (!user) throw new Error('Not signed in');
 
-  await db.collection('expenses').doc(id).delete();
+  const ref = db.collection('expenses').doc(id);
+  const snap = await ref.get();
+  if (!snap.exists) {
+    throw new Error('Expense not found');
+  }
+  const data = snap.data() as Expense;
+  if (data.userId !== user.uid) {
+    throw new Error('You do not have permission to delete this expense');
+  }
+  await ref.delete();
 }
 
 export function observeRecentExpenses(max = 20, handler: (items: Expense[]) => void) {

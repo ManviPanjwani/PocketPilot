@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
-  Button,
   FlatList,
   Pressable,
   StyleSheet,
@@ -14,6 +13,9 @@ import {
 import { Goal, observeGoals, addGoal, deleteGoal } from '@/services/goals';
 import { observeMonthlySummary, MonthlySummary } from '@/services/expenses';
 import { observeUserProfile, UserProfile } from '@/services/profile';
+import { AppButton } from '@/components/ui/AppButton';
+import { palette, cardShadow } from '@/styles/palette';
+import { Fonts } from '@/constants/theme';
 
 const currencyFormatter = new Intl.NumberFormat(undefined, {
   style: 'currency',
@@ -63,14 +65,6 @@ export default function GoalsScreen() {
     const unsubscribe = observeMonthlySummary(income, setSummary);
     return unsubscribe;
   }, [profile?.monthlyIncome]);
-
-  const normalizeCategoryLabel = (raw?: string | null, fallback?: string) => {
-    const trimmed = raw?.trim();
-    if (trimmed) return trimmed;
-    const fallbackTrimmed = fallback?.trim();
-    if (fallbackTrimmed) return fallbackTrimmed;
-    return 'Uncategorized';
-  };
 
   const availableCategories = useMemo(() => {
     const set = new Set<string>();
@@ -180,7 +174,6 @@ export default function GoalsScreen() {
     const ok = await nativeConfirm('Delete goal', `Are you sure you want to delete “${goal.title}”?`);
     if (!ok) return;
     try {
-      console.log('Deleting goal', goal.id);
       await deleteGoal(goal.id);
       Alert.alert('Delete goal', 'Goal deleted.');
     } catch (error: any) {
@@ -234,9 +227,10 @@ export default function GoalsScreen() {
             onChangeText={setDeadline}
             style={styles.input}
           />
-          <Button
-            title={saving ? 'Saving…' : 'Save goal'}
+          <AppButton
+            label="Save goal"
             onPress={handleAddGoal}
+            loading={saving}
             disabled={saving}
           />
           <Text style={styles.caption}>
@@ -312,7 +306,13 @@ export default function GoalsScreen() {
               <Text style={styles.goalDeadline}>By {goal.deadline}</Text>
             ) : null}
           </View>
-          <Button title="Delete" color="#ff5565" onPress={() => confirmDelete(goal)} />
+          <AppButton
+            label="Delete"
+            variant="danger"
+            onPress={() => confirmDelete(goal)}
+            style={styles.goalDeleteButton}
+            textStyle={styles.goalDeleteButtonText}
+          />
         </View>
 
         <Text style={styles.goalSubtitle}>
@@ -344,40 +344,46 @@ export default function GoalsScreen() {
 const styles = StyleSheet.create({
   list: {
     flex: 1,
-    backgroundColor: '#0b0f14',
+    backgroundColor: palette.background,
   },
   listContent: {
-    padding: 20,
-    paddingBottom: 40,
-    gap: 16,
+    padding: 24,
+    paddingBottom: 64,
+    gap: 20,
   },
   sectionHeader: {
-    color: '#8aa0b6',
+    color: palette.textSecondary,
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
+    marginTop: 8,
   },
   card: {
-    backgroundColor: '#111822',
-    borderRadius: 16,
+    backgroundColor: palette.surface,
+    borderRadius: 24,
     padding: 20,
-    gap: 12,
+    gap: 14,
+    borderWidth: 1,
+    borderColor: palette.border,
+    ...cardShadow,
   },
   cardTitle: {
-    color: '#e8f0fe',
+    color: palette.textPrimary,
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: '700',
+    fontFamily: Fonts.rounded,
   },
   input: {
-    backgroundColor: '#0b0f14',
-    borderRadius: 8,
-    padding: 12,
-    color: '#e8f0fe',
+    backgroundColor: palette.surfaceElevated,
+    borderRadius: 14,
+    padding: 14,
+    color: palette.textPrimary,
     borderWidth: 1,
-    borderColor: '#1f2a36',
+    borderColor: palette.border,
   },
   caption: {
-    color: '#8aa0b6',
+    color: palette.textSecondary,
     fontSize: 13,
+    lineHeight: 18,
   },
   goalHeader: {
     flexDirection: 'row',
@@ -385,64 +391,72 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   goalTitle: {
-    color: '#e8f0fe',
-    fontSize: 18,
-    fontWeight: '600',
+    color: palette.textPrimary,
+    fontSize: 19,
+    fontWeight: '700',
   },
   goalMeta: {
-    color: '#8aa0b6',
+    color: palette.textSecondary,
     marginTop: 4,
+    lineHeight: 18,
   },
   goalDeadline: {
-    color: '#8aa0b6',
-    marginTop: 2,
+    color: palette.textMuted,
+    marginTop: 4,
   },
   goalSubtitle: {
-    color: '#e8f0fe',
+    color: palette.textPrimary,
     fontSize: 16,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   progressTrack: {
-    backgroundColor: '#1f2a36',
-    height: 10,
+    backgroundColor: palette.accentMuted,
+    height: 12,
     borderRadius: 999,
     overflow: 'hidden',
   },
   progressFill: {
-    backgroundColor: '#4c71ff',
+    backgroundColor: palette.accent,
     height: '100%',
     borderRadius: 999,
   },
   goalRemaining: {
-    color: '#8aa0b6',
+    color: palette.textSecondary,
     fontSize: 14,
   },
   filterRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: 10,
   },
   filterChip: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: '#1f2a36',
-    backgroundColor: '#101721',
+    borderColor: palette.border,
+    backgroundColor: palette.surfaceElevated,
   },
   filterChipSelected: {
-    borderColor: '#4c71ff',
-    backgroundColor: 'rgba(76, 113, 255, 0.15)',
+    borderColor: palette.accentBright,
+    backgroundColor: palette.accentMuted,
   },
   filterChipText: {
-    color: '#8aa0b6',
-    fontWeight: '500',
+    color: palette.textSecondary,
+    fontWeight: '600',
   },
   filterChipTextSelected: {
-    color: '#e8f0fe',
+    color: palette.textPrimary,
   },
   suggestionRow: {
     gap: 8,
+  },
+  goalDeleteButton: {
+    minHeight: 40,
+    paddingHorizontal: 16,
+  },
+  goalDeleteButtonText: {
+    fontSize: 14,
   },
 });
 
