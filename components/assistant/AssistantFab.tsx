@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 import { useAssistant } from '@/assistant/AssistantContext';
 import { palette, cardShadow } from '@/styles/palette';
@@ -29,7 +29,7 @@ export function AssistantFab() {
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    bottom: 28,
+    bottom: Platform.select({ ios: 96, android: 96, default: 28 }),
     right: 20,
     zIndex: 999,
   },

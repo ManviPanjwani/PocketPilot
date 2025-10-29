@@ -4,6 +4,21 @@ export const currencyFormatter = new Intl.NumberFormat(undefined, {
   maximumFractionDigits: 2,
 });
 
+const CATEGORY_LABELS = [
+  'Groceries',
+  'Dining Out',
+  'Rent',
+  'Utilities',
+  'Transportation',
+  'Entertainment',
+  'Shopping',
+  'Health',
+  'Travel',
+  'Other',
+];
+
+export const STANDARD_CATEGORIES = CATEGORY_LABELS;
+
 export function parseAmount(raw?: string | null): number | null {
   if (!raw) return null;
   const cleaned = raw.replace(/[^0-9.,-]/g, '').replace(/,/g, '');
@@ -40,4 +55,42 @@ export function isExitIntent(input: string) {
   ];
 
   return phrases.some((phrase) => normalized.includes(phrase));
+}
+
+export function parseISODateInput(input: string): string | null {
+  const trimmed = input.trim();
+  if (!trimmed) return null;
+
+  // Direct ISO YYYY-MM-DD
+  const isoPattern = /^\d{4}-\d{2}-\d{2}$/;
+  if (isoPattern.test(trimmed)) {
+    const date = new Date(trimmed + 'T00:00:00Z');
+    if (!Number.isNaN(date.getTime())) {
+      return trimmed;
+    }
+  }
+
+  const parsed = Date.parse(trimmed);
+  if (!Number.isNaN(parsed)) {
+    const date = new Date(parsed);
+    return date.toISOString().slice(0, 10);
+  }
+
+  return null;
+}
+
+export function normalizeCategoryInput(input?: string | null): string | undefined {
+  if (!input) return undefined;
+  const trimmed = input.trim();
+  if (!trimmed.length) return undefined;
+
+  const lowered = trimmed.toLowerCase();
+  const knownMatch = CATEGORY_LABELS.find((label) => label.toLowerCase() === lowered);
+  if (knownMatch) {
+    return knownMatch;
+  }
+
+  return trimmed
+    .toLowerCase()
+    .replace(/\b\w/g, (char) => char.toUpperCase());
 }

@@ -3,7 +3,7 @@ import { addGoal } from '@/services/goals';
 import { upsertUserProfile } from '@/services/profile';
 
 import { FlowId } from './flows';
-import { currencyFormatter, parseAmount } from './utils';
+import { currencyFormatter, normalizeCategoryInput, parseAmount } from './utils';
 
 export type CommandResult = {
   message: string;
@@ -11,7 +11,7 @@ export type CommandResult = {
 };
 
 export const COMMAND_HELP =
-  'Try commands like "add expense 45 groceries", "set income 5000", or "add goal vacation 1200".';
+  'Try commands like "add expense 45 groceries", "delete expense groceries", "update expense June 12", or "set income 5000".';
 
 export async function processAssistantCommand(input: string): Promise<CommandResult> {
   const normalized = input.trim();
@@ -65,23 +65,38 @@ export async function processAssistantCommand(input: string): Promise<CommandRes
     if (remainingTokens.length) {
       const noteMarker = remainingTokens.toLowerCase().indexOf(' note ');
       if (noteMarker >= 0) {
-        category = remainingTokens.slice(0, noteMarker).trim();
+        category = normalizeCategoryInput(remainingTokens.slice(0, noteMarker));
         note = remainingTokens.slice(noteMarker + 6).trim();
       } else {
-        category = remainingTokens;
+        category = normalizeCategoryInput(remainingTokens);
       }
     }
 
     await addExpense({
       amount,
       totalAmount: amount,
-      category: category?.length ? category : undefined,
+      category,
       note: note?.length ? note : undefined,
     });
 
     const categoryText = category?.length ? ` under ${category}` : '';
     return {
       message: `Logged ${currencyFormatter.format(amount)}${categoryText}. Need anything else?`,
+    };
+  }
+
+  // Handle delete expense flow trigger
+  if (lower.startsWith('delete expense') || lower.startsWith('remove expense')) {
+    return {
+      message: 'Let me help delete that expense.',
+      startFlow: 'deleteExpense',
+    };
+  }
+
+  if (lower.startsWith('update expense') || lower.startsWith('edit expense')) {
+    return {
+      message: 'Sure, let’s update that expense.',
+      startFlow: 'updateExpense',
     };
   }
 

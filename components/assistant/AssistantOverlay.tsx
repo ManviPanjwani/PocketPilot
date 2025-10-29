@@ -27,6 +27,7 @@ export function AssistantOverlay() {
     enabled,
     startFlow,
     activeFlowId,
+    suggestions,
   } = useAssistant();
   const [input, setInput] = useState('');
   const scrollRef = useRef<ScrollView>(null);
@@ -43,6 +44,12 @@ export function AssistantOverlay() {
     });
   };
 
+  const handleSuggestion = async (value: string) => {
+    if (!value) return;
+    setInput('');
+    await submitCommand(value);
+  };
+
   const placeholder = !enabled
     ? 'Assistant unavailable while signed out.'
     : activeFlowId
@@ -53,6 +60,8 @@ export function AssistantOverlay() {
     { id: 'expense', label: 'Log an expense' },
     { id: 'income', label: 'Update income' },
     { id: 'goal', label: 'Create goal' },
+    { id: 'updateExpense', label: 'Edit expense' },
+    { id: 'deleteExpense', label: 'Delete expense' },
   ];
 
   return (
@@ -64,7 +73,10 @@ export function AssistantOverlay() {
         <View style={styles.sheet}>
           <View style={styles.sheetHeader}>
             <Text style={styles.sheetTitle}>PocketPilot Assistant</Text>
-            <TouchableOpacity onPress={closeAssistant} accessibilityRole="button">
+            <TouchableOpacity
+              onPress={closeAssistant}
+              accessibilityRole="button"
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
               <Text style={styles.closeButton}>Dismiss</Text>
             </TouchableOpacity>
           </View>
@@ -116,6 +128,28 @@ export function AssistantOverlay() {
               </View>
             ) : null}
           </ScrollView>
+          {enabled && suggestions.length ? (
+            <View style={styles.suggestionsRow}>
+              {suggestions.map((option) => (
+                <TouchableOpacity
+                  key={`suggestion-${option}`}
+                  style={styles.suggestionChip}
+                  onPress={() => handleSuggestion(option)}>
+                  <Text style={styles.suggestionText}>{option}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          ) : null}
+          {enabled ? (
+            <View style={styles.controlsRow}>
+              <AppButton
+                label="Minimize"
+                variant="secondary"
+                onPress={closeAssistant}
+                style={styles.controlButton}
+              />
+            </View>
+          ) : null}
           <View style={styles.inputRow}>
             <TextInput
               value={input}
@@ -124,6 +158,9 @@ export function AssistantOverlay() {
               editable={enabled && !processing}
               style={styles.input}
               placeholderTextColor={palette.textMuted}
+              onSubmitEditing={handleSend}
+              blurOnSubmit={false}
+              returnKeyType="send"
             />
             <AppButton
               label="Send"
@@ -192,6 +229,32 @@ const styles = StyleSheet.create({
   quickChipText: {
     color: palette.accentBright,
     fontWeight: '600',
+  },
+  suggestionsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 12,
+  },
+  suggestionChip: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 999,
+    backgroundColor: palette.surfaceElevated,
+    borderWidth: 1,
+    borderColor: palette.border,
+  },
+  suggestionText: {
+    color: palette.textSecondary,
+    fontWeight: '600',
+  },
+  controlsRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: 12,
+  },
+  controlButton: {
+    minWidth: 120,
   },
   flowHint: {
     color: palette.textMuted,

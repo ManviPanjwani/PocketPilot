@@ -8,7 +8,7 @@ import React, {
 } from 'react';
 
 import { processAssistantCommand } from './commandHandlers';
-import { FlowId, FlowState, handleFlowInput, initFlow } from './flows';
+import { FlowId, FlowState, getFlowSuggestions, handleFlowInput, initFlow } from './flows';
 import { isExitIntent } from './utils';
 
 export type AssistantMessage = {
@@ -25,6 +25,7 @@ type AssistantContextValue = {
   processing: boolean;
   error: string | null;
   activeFlowId: FlowId | null;
+  suggestions: string[];
   openAssistant: () => void;
   closeAssistant: () => void;
   toggleAssistant: () => void;
@@ -43,7 +44,7 @@ type Props = {
 export function AssistantProvider({ children, enabled = true }: Props) {
   const [isOpen, setOpen] = useState(false);
   const [messages, setMessages] = useState<AssistantMessage[]>([{
-    id: 'welcome',
+    id: `assistant-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     role: 'assistant',
     text: 'Hi! I can log expenses, set your monthly income, or create savings goals. Tell me what you need.',
     timestamp: Date.now(),
@@ -52,6 +53,17 @@ export function AssistantProvider({ children, enabled = true }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [activeFlow, setActiveFlow] = useState<FlowState | null>(null);
 
+  const defaultSuggestions = useMemo(
+    () => [
+      'Add expense 25 groceries',
+      'Set income 5000',
+      'Add goal vacation 1200',
+      'Update expense',
+      'Delete expense',
+    ],
+    [],
+  );
+
   const appendAssistantMessages = useCallback((texts: string[]) => {
     const cleaned = texts.filter((text) => text && text.trim().length);
     if (!cleaned.length) return;
@@ -59,7 +71,7 @@ export function AssistantProvider({ children, enabled = true }: Props) {
     setMessages((prev) => [
       ...prev,
       ...cleaned.map((text, idx) => ({
-        id: `assistant-${timestamp}-${idx}`,
+        id: `assistant-${timestamp}-${idx}-${Math.random().toString(36).slice(2, 8)}`,
         role: 'assistant',
         text,
         timestamp: timestamp + idx,
@@ -115,7 +127,7 @@ export function AssistantProvider({ children, enabled = true }: Props) {
       const shouldExit = wantsExit || (!activeFlow && normalized === 'no');
 
       const userMessage: AssistantMessage = {
-        id: `user-${Date.now()}`,
+        id: `user-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
         role: 'user',
         text: trimmed,
         timestamp: Date.now(),
@@ -173,6 +185,7 @@ export function AssistantProvider({ children, enabled = true }: Props) {
       processing,
       error,
       activeFlowId: activeFlow?.id ?? null,
+      suggestions: activeFlow ? getFlowSuggestions(activeFlow) : defaultSuggestions,
       openAssistant,
       closeAssistant,
       toggleAssistant,
@@ -187,6 +200,7 @@ export function AssistantProvider({ children, enabled = true }: Props) {
       processing,
       error,
       activeFlow,
+      defaultSuggestions,
       openAssistant,
       closeAssistant,
       toggleAssistant,
