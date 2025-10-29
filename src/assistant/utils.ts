@@ -94,3 +94,31 @@ export function normalizeCategoryInput(input?: string | null): string | undefine
     .toLowerCase()
     .replace(/\b\w/g, (char) => char.toUpperCase());
 }
+
+export function isYesIntent(input: string) {
+  const normalized = input.trim().toLowerCase();
+  if (!normalized) return false;
+  return ['yes', 'y', 'sure', 'yeah', 'yep', 'ok', 'okay', 'affirmative'].includes(normalized);
+}
+
+export function isNoIntent(input: string) {
+  const normalized = input.trim().toLowerCase();
+  if (!normalized) return false;
+  return ['no', 'n', 'nope', 'nah'].includes(normalized);
+}
+
+export function isDoneIntent(input: string) {
+  const normalized = input.trim().toLowerCase();
+  if (!normalized) return false;
+  return [
+    'done',
+    'finished',
+    'all done',
+    'no more',
+    'complete',
+    'none',
+    'that is all',
+    "that's all",
+    'thats all',
+  ].includes(normalized);
+}

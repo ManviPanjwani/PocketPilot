@@ -5,7 +5,10 @@ import { upsertUserProfile } from '@/services/profile';
 import {
   STANDARD_CATEGORIES,
   currencyFormatter,
+  isDoneIntent,
+  isNoIntent,
   isSkipIntent,
+  isYesIntent,
   normalizeCategoryInput,
   parseAmount,
   parseISODateInput,
@@ -21,11 +24,24 @@ const GOAL_NAME_SUGGESTIONS = ['Emergency fund', 'Vacation', 'New laptop'];
 const GOAL_AMOUNT_SUGGESTIONS = ['500', '1000', '2500'];
 const INCOME_SUGGESTIONS = ['4500', '5000', '6000'];
 
+type SplitParticipant = {
+  name: string;
+  amount: number;
+};
+
 type ExpenseState = {
   id: 'expense';
-  step: 'awaitAmount' | 'awaitCategory' | 'awaitNote';
+  step:
+    | 'awaitAmount'
+    | 'awaitSelfShare'
+    | 'awaitSplitDecision'
+    | 'awaitParticipant'
+    | 'awaitCategory'
+    | 'awaitNote';
   data: {
-    amount?: number;
+    totalAmount?: number;
+    selfShare?: number;
+    participants: SplitParticipant[];
     category?: string;
     note?: string;
   };
@@ -198,8 +214,8 @@ export function initFlow(flowId: FlowId): FlowInit {
   switch (flowId) {
     case 'expense':
       return {
-        state: { id: 'expense', step: 'awaitAmount', data: {} },
-        intro: 'Let’s log an expense. How much did you spend?',
+        state: { id: 'expense', step: 'awaitAmount', data: { participants: [] } },
+        intro: 'Let’s log an expense. What was the total amount?',
       };
     case 'income':
       return {
@@ -247,23 +263,181 @@ async function handleExpenseFlow(state: ExpenseState, input: string): Promise<Fl
   const trimmed = input.trim();
 
   if (state.step === 'awaitAmount') {
-    const amount = parseAmount(trimmed);
-    if (!amount || amount <= 0) {
+    const total = parseAmount(trimmed);
+    if (!total || total <= 0) {
       return {
-        messages: ['I need a positive amount. For example, “25.60”.'],
+        messages: ['Enter the total amount as a positive number, e.g. “48.30”.'],
         nextState: state,
       };
     }
     const nextState: ExpenseState = {
       id: 'expense',
-      step: 'awaitCategory',
-      data: { amount },
+      step: 'awaitSelfShare',
+      data: { ...state.data, totalAmount: total, participants: [] },
     };
     return {
       messages: [
-        `Got it — ${currencyFormatter.format(amount)}.`,
-        'Which category should I file this under? Say “skip” to leave it uncategorized.',
+        `Noted ${currencyFormatter.format(total)}. How much was your share? If you covered it all, repeat the same amount.`,
       ],
+      nextState,
+    };
+  }
+
+  if (state.step === 'awaitSelfShare') {
+    const total = state.data.totalAmount ?? 0;
+    const selfShare = parseAmount(trimmed);
+    if (!selfShare || selfShare <= 0) {
+      return {
+        messages: ['Enter what you actually paid (e.g. “20”).'],
+        nextState: state,
+      };
+    }
+    if (total && selfShare - total > 0.01) {
+      return {
+        messages: ['Your share can’t be greater than the total. Try again.'],
+        nextState: state,
+      };
+    }
+
+    const remainder = Math.max(total - selfShare, 0);
+    const nextState: ExpenseState = {
+      id: 'expense',
+      step: 'awaitSplitDecision',
+      data: { ...state.data, selfShare, participants: state.data.participants ?? [], totalAmount: total || selfShare },
+    };
+    const prompt = remainder > 0.01
+      ? `There’s ${currencyFormatter.format(remainder)} remaining. Did you split this with someone else? (yes/no)`
+      : 'Did you split this with someone else? (yes/no)';
+    return { messages: [prompt], nextState };
+  }
+
+  if (state.step === 'awaitSplitDecision') {
+    if (isYesIntent(trimmed)) {
+      const total = state.data.totalAmount ?? 0;
+      const selfShare = state.data.selfShare ?? total;
+      const remainder = Math.max(total - selfShare, 0);
+      if (remainder <= 0.01) {
+        // nothing left to split
+        const nextState: ExpenseState = {
+          id: 'expense',
+          step: 'awaitCategory',
+          data: { ...state.data, participants: state.data.participants ?? [] },
+        };
+        return {
+          messages: ['Looks like nothing is left to split. Which category should I use?'],
+          nextState,
+        };
+      }
+      const nextState: ExpenseState = {
+        id: 'expense',
+        step: 'awaitParticipant',
+        data: { ...state.data, participants: state.data.participants ?? [] },
+      };
+      return {
+        messages: [
+          'Okay! Add someone in the format “Name amount” (e.g. “Alex 15”). Say “done” when finished.',
+        ],
+        nextState,
+      };
+    }
+
+    if (isNoIntent(trimmed) || isSkipIntent(trimmed)) {
+      const nextState: ExpenseState = {
+        id: 'expense',
+        step: 'awaitCategory',
+        data: { ...state.data, participants: [] },
+      };
+      return {
+        messages: ['Which category should I use? Say “skip” to leave it uncategorized.'],
+        nextState,
+      };
+    }
+
+    return {
+      messages: ['Please answer “yes” or “no”.'],
+      nextState: state,
+    };
+  }
+
+  if (state.step === 'awaitParticipant') {
+    if (isDoneIntent(trimmed)) {
+      const total = state.data.totalAmount ?? 0;
+      const selfShare = state.data.selfShare ?? total;
+      const participants = state.data.participants ?? [];
+      const othersTotal = participants.reduce((sum, participant) => sum + participant.amount, 0);
+      const remainder = total - selfShare - othersTotal;
+
+      if (Math.abs(remainder) > 0.01) {
+        const msg = remainder > 0
+          ? `We still need to allocate ${currencyFormatter.format(remainder)}. Add another person or adjust amounts.`
+          : `You’ve allocated ${currencyFormatter.format(Math.abs(remainder))} too much. Adjust the amounts.`;
+        return {
+          messages: [msg],
+          nextState: state,
+        };
+      }
+
+      const nextState: ExpenseState = {
+        id: 'expense',
+        step: 'awaitCategory',
+        data: { ...state.data, participants },
+      };
+      return {
+        messages: ['Great! Which category should I use? Say “skip” to leave it uncategorized.'],
+        nextState,
+      };
+    }
+
+    const amountMatch = trimmed.match(/(-?\d[\d.,]*)$/);
+    if (!amountMatch) {
+      return {
+        messages: ['Add someone like “Alex 12.50” or say “done”.'],
+        nextState: state,
+      };
+    }
+
+    const amount = parseAmount(amountMatch[0]);
+    if (!amount || amount <= 0) {
+      return {
+        messages: ['Enter a positive amount, e.g. “Alex 12.50”.'],
+        nextState: state,
+      };
+    }
+
+    const existingParticipants = state.data.participants ?? [];
+    const rawName = trimmed.slice(0, amountMatch.index).trim();
+    const fallbackName = rawName || `Person ${existingParticipants.length + 1}`;
+    const normalizedName = normalizeCategoryInput(fallbackName) ?? fallbackName.replace(/\s+/g, ' ').trim();
+
+    const tentativeParticipants = [...existingParticipants, { name: normalizedName, amount }];
+    const total = state.data.totalAmount ?? 0;
+    const selfShare = state.data.selfShare ?? total;
+    const othersTotal = tentativeParticipants.reduce((sum, participant) => sum + participant.amount, 0);
+    const remainder = total - selfShare - othersTotal;
+
+    if (remainder < -0.01) {
+      return {
+        messages: [
+          `That pushes the split over by ${currencyFormatter.format(Math.abs(remainder))}. Try a smaller amount for ${normalizedName}.`,
+        ],
+        nextState: state,
+      };
+    }
+
+    const nextState: ExpenseState = {
+      id: 'expense',
+      step: 'awaitParticipant',
+      data: { ...state.data, participants: tentativeParticipants },
+    };
+
+    const message = Math.abs(remainder) <= 0.01
+      ? 'Nice! Amounts balance out. Say “done” or add another person.'
+      : remainder > 0
+      ? `Added ${normalizedName}. Still ${currencyFormatter.format(remainder)} unassigned. Add another person or type “done”.`
+      : `Added ${normalizedName}, but totals now exceed by ${currencyFormatter.format(Math.abs(remainder))}. Adjust the last amount or type “done” when fixed.`;
+
+    return {
+      messages: [message],
       nextState,
     };
   }
@@ -273,7 +447,7 @@ async function handleExpenseFlow(state: ExpenseState, input: string): Promise<Fl
     const nextState: ExpenseState = {
       id: 'expense',
       step: 'awaitNote',
-      data: { ...state.data, category },
+      data: { ...state.data, category, participants: state.data.participants ?? [] },
     };
     return {
       messages: ['Any note you’d like to add? You can also say “skip”.'],
@@ -283,14 +457,24 @@ async function handleExpenseFlow(state: ExpenseState, input: string): Promise<Fl
 
   if (state.step === 'awaitNote') {
     const note = isSkipIntent(trimmed) ? undefined : trimmed;
-    const amount = state.data.amount ?? 0;
-    const payload = {
-      amount,
-      totalAmount: amount,
+    const total = state.data.totalAmount ?? state.data.selfShare ?? 0;
+    const selfShare = state.data.selfShare ?? total;
+    const participants = state.data.participants ?? [];
+
+    const splits = participants.length
+      ? [
+          { label: 'Me', amount: selfShare },
+          ...participants.map((participant) => ({ label: participant.name, amount: participant.amount })),
+        ]
+      : undefined;
+
+    await addExpense({
+      amount: selfShare,
+      totalAmount: splits ? total : selfShare,
       category: state.data.category,
       note,
-    };
-    await addExpense(payload);
+      splits,
+    });
     return {
       messages: [
         'All set! I logged that expense for you.',
@@ -520,6 +704,25 @@ export function getFlowSuggestions(state: FlowState | null): string[] {
     case 'expense':
       if (state.step === 'awaitAmount') {
         return EXPENSE_AMOUNT_SUGGESTIONS;
+      }
+      if (state.step === 'awaitSelfShare') {
+        const total = state.data.totalAmount ?? 0;
+        const half = total > 0 ? (total / 2).toFixed(2) : undefined;
+        const suggestions = [total > 0 ? total.toFixed(2) : undefined, half].filter(Boolean) as string[];
+        return suggestions.length ? suggestions : EXPENSE_AMOUNT_SUGGESTIONS;
+      }
+      if (state.step === 'awaitSplitDecision') {
+        return ['Yes', 'No'];
+      }
+      if (state.step === 'awaitParticipant') {
+        const participants = state.data.participants ?? [];
+        const total = state.data.totalAmount ?? 0;
+        const selfShare = state.data.selfShare ?? total;
+        const assigned = participants.reduce((sum, participant) => sum + participant.amount, 0);
+        const remaining = Math.max(total - selfShare - assigned, 0);
+        const amountSuggestion = remaining > 0 ? remaining.toFixed(2) : '10';
+        const nextIndex = participants.length + 1;
+        return ['Done', `Friend ${nextIndex} ${amountSuggestion}`];
       }
       if (state.step === 'awaitCategory') {
         return [...EXPENSE_CATEGORY_SUGGESTIONS, 'Skip'];
