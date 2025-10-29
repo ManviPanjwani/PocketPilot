@@ -10,11 +10,13 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 
 import { useAssistant } from '@/assistant/AssistantContext';
 import { COMMAND_HELP } from '@/assistant/commandHandlers';
 import type { FlowId } from '@/assistant/flows';
 import { AppButton } from '@/components/ui/AppButton';
+import { IconSymbol } from '@/components/ui/icon-symbol';
 import { palette } from '@/styles/palette';
 
 export function AssistantOverlay() {
@@ -70,7 +72,11 @@ export function AssistantOverlay() {
         style={styles.backdrop}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <TouchableOpacity style={styles.scrim} activeOpacity={1} onPress={closeAssistant} />
-        <View style={styles.sheet}>
+        <LinearGradient
+          colors={['#16233c', '#0f192d']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 0.9, y: 1 }}
+          style={styles.sheet}>
           <View style={styles.sheetHeader}>
             <Text style={styles.sheetTitle}>PocketPilot Assistant</Text>
             <TouchableOpacity
@@ -108,23 +114,36 @@ export function AssistantOverlay() {
             style={styles.messages}
             contentContainerStyle={styles.messagesContent}
             onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: true })}>
-            {grouped.map((message) => (
-              <View
-                key={message.id}
-                style={[
-                  styles.message,
-                  message.role === 'user' ? styles.messageUser : styles.messageAssistant,
-                ]}>
-                <Text style={styles.messageAuthor}>
-                  {message.role === 'user' ? 'You' : 'Assistant'}
-                </Text>
-                <Text style={styles.messageText}>{message.text}</Text>
-              </View>
-            ))}
+            {grouped.map((message) => {
+              const isUser = message.role === 'user';
+              return (
+                <View
+                  key={message.id}
+                  style={[styles.messageContainer, isUser ? styles.messageContainerUser : styles.messageContainerAssistant]}>
+                  {!isUser ? (
+                    <View style={styles.avatarBadge}>
+                      <IconSymbol name="sparkles" color={palette.background} size={16} />
+                    </View>
+                  ) : null}
+                  <View style={[styles.messageBubble, isUser ? styles.messageBubbleUser : styles.messageBubbleAssistant]}>
+                    <Text
+                      style={[styles.messageAuthor, isUser ? styles.messageAuthorUser : styles.messageAuthorAssistant]}>
+                      {isUser ? 'You' : 'Assistant'}
+                    </Text>
+                    <Text style={[styles.messageText, isUser ? styles.messageTextUser : undefined]}>{message.text}</Text>
+                  </View>
+                </View>
+              );
+            })}
             {processing ? (
-              <View style={[styles.message, styles.messageAssistant]}>
-                <Text style={styles.messageAuthor}>Assistant</Text>
-                <Text style={styles.messageText}>Working on it…</Text>
+              <View style={[styles.messageContainer, styles.messageContainerAssistant]}>
+                <View style={styles.avatarBadge}>
+                  <IconSymbol name="sparkles" color={palette.background} size={16} />
+                </View>
+                <View style={[styles.messageBubble, styles.messageBubbleAssistant]}>
+                  <Text style={styles.messageAuthorAssistant}>Assistant</Text>
+                  <Text style={styles.messageText}>Working on it…</Text>
+                </View>
               </View>
             ) : null}
           </ScrollView>
@@ -170,7 +189,7 @@ export function AssistantOverlay() {
             />
           </View>
           <Text style={styles.hint}>{COMMAND_HELP}</Text>
-        </View>
+        </LinearGradient>
       </KeyboardAvoidingView>
     </Modal>
   );
@@ -188,7 +207,7 @@ const styles = StyleSheet.create({
   },
   sheet: {
     width: '100%',
-    backgroundColor: palette.surface,
+    backgroundColor: 'transparent',
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     paddingHorizontal: 20,
@@ -196,6 +215,7 @@ const styles = StyleSheet.create({
     paddingBottom: 30,
     borderTopWidth: 1,
     borderColor: palette.border,
+    overflow: 'hidden',
   },
   sheetHeader: {
     flexDirection: 'row',
@@ -274,34 +294,65 @@ const styles = StyleSheet.create({
     maxHeight: '60%',
   },
   messagesContent: {
-    gap: 12,
-    paddingBottom: 12,
+    gap: 16,
+    paddingBottom: 16,
   },
-  message: {
-    padding: 14,
-    borderRadius: 18,
-    gap: 6,
+  messageContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 10,
+    alignSelf: 'flex-start',
+    maxWidth: '88%',
   },
-  messageUser: {
-    backgroundColor: palette.accent,
-    alignSelf: 'flex-end',
-  },
-  messageAssistant: {
-    backgroundColor: palette.surfaceElevated,
-    borderWidth: 1,
-    borderColor: palette.border,
+  messageContainerAssistant: {
     alignSelf: 'flex-start',
   },
+  messageContainerUser: {
+    flexDirection: 'row-reverse',
+    alignSelf: 'flex-end',
+  },
+  avatarBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: palette.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.35)',
+  },
+  messageBubble: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    gap: 6,
+  },
+  messageBubbleAssistant: {
+    backgroundColor: 'rgba(16, 28, 51, 0.95)',
+    borderWidth: 1,
+    borderColor: 'rgba(124, 131, 255, 0.18)',
+  },
+  messageBubbleUser: {
+    backgroundColor: palette.accent,
+  },
   messageAuthor: {
-    color: palette.textMuted,
-    fontSize: 12,
+    fontSize: 11,
     textTransform: 'uppercase',
-    letterSpacing: 0.6,
+    letterSpacing: 0.8,
+  },
+  messageAuthorAssistant: {
+    color: palette.textMuted,
+  },
+  messageAuthorUser: {
+    color: palette.background,
   },
   messageText: {
     color: palette.textPrimary,
     fontSize: 15,
     lineHeight: 20,
+  },
+  messageTextUser: {
+    color: palette.background,
   },
   inputRow: {
     flexDirection: 'row',

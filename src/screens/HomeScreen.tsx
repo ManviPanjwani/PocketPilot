@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 
 import { firebaseAuth } from '../firebase';
 import { listenAuth, signOutUser } from '../services/auth';
@@ -172,7 +173,11 @@ export default function HomeScreen() {
         </TouchableOpacity>
       </View>
 
-      <View style={styles.heroCard}>
+      <LinearGradient
+        colors={['#243357', '#101c33']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.heroCard}>
         <View style={styles.heroContent}>
           <View>
             <Text style={styles.heroLabel}>Remaining budget</Text>
@@ -189,7 +194,7 @@ export default function HomeScreen() {
         <Text style={styles.heroHint}>
           Keep logging expenses to stay on track this month.
         </Text>
-      </View>
+      </LinearGradient>
 
       <View style={styles.card}>
         <View style={styles.cardHeader}>
@@ -401,11 +406,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   heroCard: {
-    backgroundColor: palette.surface,
     borderRadius: 24,
     padding: 24,
     borderWidth: 1,
-    borderColor: palette.border,
+    borderColor: 'rgba(124, 131, 255, 0.25)',
     gap: 12,
     ...cardShadow,
   },
@@ -441,12 +445,12 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   card: {
-    backgroundColor: palette.surface,
+    backgroundColor: 'rgba(16, 28, 51, 0.92)',
     borderRadius: 24,
     padding: 24,
     gap: 16,
     borderWidth: 1,
-    borderColor: palette.border,
+    borderColor: 'rgba(124, 131, 255, 0.12)',
     ...cardShadow,
   },
   cardHeader: {
@@ -456,8 +460,10 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     color: palette.textPrimary,
-    fontSize: 18,
+    fontSize: 19,
     fontWeight: '700',
+    letterSpacing: 0.2,
+    fontFamily: Fonts.rounded,
   },
   cardSubtitle: {
     color: palette.textMuted,

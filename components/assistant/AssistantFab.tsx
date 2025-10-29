@@ -1,5 +1,6 @@
 import React from 'react';
 import { Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 
 import { useAssistant } from '@/assistant/AssistantContext';
 import { palette, cardShadow } from '@/styles/palette';
@@ -15,11 +16,18 @@ export function AssistantFab() {
   return (
     <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
       <View pointerEvents="box-none" style={styles.container}>
-        <TouchableOpacity
-          style={[styles.fab, !enabled && styles.fabDisabled]}
-          onPress={openAssistant}
-          activeOpacity={0.9}>
-          <IconSymbol name="sparkles" color={palette.background} size={22} />
+        <TouchableOpacity onPress={openAssistant} activeOpacity={0.9} disabled={!enabled}>
+          <LinearGradient
+            colors={enabled ? ['#7c83ff', '#5666ff'] : ['rgba(124, 131, 255, 0.55)', 'rgba(124, 131, 255, 0.45)']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.fab}>
+            <IconSymbol
+              name="sparkles"
+              color={enabled ? palette.background : 'rgba(12,18,30,0.85)'}
+              size={22}
+            />
+          </LinearGradient>
         </TouchableOpacity>
       </View>
     </View>
@@ -34,18 +42,13 @@ const styles = StyleSheet.create({
     zIndex: 999,
   },
   fab: {
-    backgroundColor: palette.accent,
     alignItems: 'center',
     justifyContent: 'center',
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 58,
+    height: 58,
+    borderRadius: 29,
     borderWidth: 1,
-    borderColor: palette.border,
-    ...cardShadow,
-  },
-  fabDisabled: {
-    backgroundColor: 'rgba(124, 131, 255, 0.55)',
     borderColor: 'rgba(255, 255, 255, 0.25)',
+    ...cardShadow,
   },
 });
