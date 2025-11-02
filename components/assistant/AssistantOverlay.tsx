@@ -10,7 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import { LinearGradient } from '@/utils/LinearGradient';
 
 import { useAssistant } from '@/assistant/AssistantContext';
 import { COMMAND_HELP } from '@/assistant/commandHandlers';

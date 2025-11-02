@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import { LinearGradient } from '@/utils/LinearGradient';
 
 import { firebaseAuth } from '../firebase';
 import { listenAuth, signOutUser } from '../services/auth';

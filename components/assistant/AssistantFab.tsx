@@ -1,6 +1,7 @@
 import React from 'react';
 import { Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+
+import { LinearGradient } from '@/utils/LinearGradient';
 
 import { useAssistant } from '@/assistant/AssistantContext';
 import { palette, cardShadow } from '@/styles/palette';

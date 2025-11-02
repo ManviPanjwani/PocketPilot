@@ -230,3 +230,78 @@ export function observeMonthlySummary(
       });
     });
 }
+
+export function observeHistoricalSummaries(
+  handler: (summaries: Array<{ id: string; summary: MonthlySummary }>) => void,
+) {
+  const user = firebaseAuth.currentUser;
+  if (!user) {
+    handler([]);
+    return () => {};
+  }
+
+  const now = new Date();
+  const startOfYear = new Date(now.getFullYear(), 0, 1);
+  const startTimestamp = firebase.firestore.Timestamp.fromDate(startOfYear);
+
+  return db
+    .collection('expenses')
+    .where('userId', '==', user.uid)
+    .where('createdAt', '>=', startTimestamp)
+    .orderBy('createdAt', 'desc')
+    .onSnapshot((snapshot) => {
+      const map = new Map<string, MonthlySummary>();
+
+      snapshot.forEach((doc) => {
+        const data = doc.data() as Expense;
+        const createdAt = data.createdAt && typeof (data.createdAt as any).toDate === 'function'
+          ? (data.createdAt as any).toDate()
+          : data.createdAtISO
+          ? new Date(data.createdAtISO)
+          : null;
+        if (!createdAt) {
+          return;
+        }
+
+        const monthKey = `${createdAt.getFullYear()}-${String(createdAt.getMonth() + 1).padStart(2, '0')}`;
+
+        if (!map.has(monthKey)) {
+          map.set(monthKey, {
+            totalSpent: 0,
+            remainingBudget: 0,
+            monthlyIncome: 0,
+            transactions: 0,
+            byCategory: [],
+            dailyTotals: [],
+          });
+        }
+
+        const summary = map.get(monthKey)!;
+        const amount = Number(data.amount) || 0;
+        summary.totalSpent += amount;
+        summary.transactions += 1;
+
+        const categoryLabel = data.category || 'Uncategorized';
+        const categoryEntry = summary.byCategory.find((entry) => entry.category === categoryLabel);
+        if (categoryEntry) {
+          categoryEntry.total += amount;
+        } else {
+          summary.byCategory.push({ category: categoryLabel, total: amount });
+        }
+
+        summary.dailyTotals.push({
+          date: createdAt.toISOString().slice(0, 10),
+          total: amount,
+        });
+      });
+
+      const results = Array.from(map.entries())
+        .sort((a, b) => (a[0] > b[0] ? -1 : 1))
+        .map(([id, summary]) => ({
+          id,
+          summary,
+        }));
+
+      handler(results);
+    });
+}
