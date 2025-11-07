@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Modal,
@@ -18,6 +18,7 @@ import type { FlowId } from '@/assistant/flows';
 import { AppButton } from '@/components/ui/AppButton';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { palette } from '@/styles/palette';
+import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 
 export function AssistantOverlay() {
   const {
@@ -51,6 +52,30 @@ export function AssistantOverlay() {
     setInput('');
     await submitCommand(value);
   };
+
+  const handleSpeechResult = useCallback(
+    (transcript: string, isFinal: boolean) => {
+      if (!transcript.trim()) return;
+      if (isFinal) {
+        setInput('');
+        void submitCommand(transcript);
+      } else {
+        setInput(transcript);
+      }
+    },
+    [submitCommand],
+  );
+
+  const { supported: speechSupported, listening: speechListening, start: startSpeech, stop: stopSpeech } =
+    useSpeechRecognition(handleSpeechResult);
+
+  const handleMicPress = useCallback(() => {
+    if (speechListening) {
+      stopSpeech();
+      return;
+    }
+    startSpeech();
+  }, [speechListening, startSpeech, stopSpeech]);
 
   const placeholder = !enabled
     ? 'Assistant unavailable while signed out.'
@@ -148,25 +173,20 @@ export function AssistantOverlay() {
             ) : null}
           </ScrollView>
           {enabled && suggestions.length ? (
-            <View style={styles.suggestionsRow}>
-              {suggestions.map((option) => (
-                <TouchableOpacity
-                  key={`suggestion-${option}`}
-                  style={styles.suggestionChip}
-                  onPress={() => handleSuggestion(option)}>
-                  <Text style={styles.suggestionText}>{option}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          ) : null}
-          {enabled ? (
-            <View style={styles.controlsRow}>
-              <AppButton
-                label="Minimize"
-                variant="secondary"
-                onPress={closeAssistant}
-                style={styles.controlButton}
-              />
+            <View style={styles.suggestionsWrapper}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.suggestionsRow}>
+                {suggestions.map((option) => (
+                  <TouchableOpacity
+                    key={`suggestion-${option}`}
+                    style={styles.suggestionChip}
+                    onPress={() => handleSuggestion(option)}>
+                    <Text style={styles.suggestionText}>{option}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
             </View>
           ) : null}
           <View style={styles.inputRow}>
@@ -187,7 +207,39 @@ export function AssistantOverlay() {
               disabled={!enabled || processing || !input.trim()}
               style={styles.sendButton}
             />
+            {enabled ? (
+              <TouchableOpacity
+                style={[styles.micButton, speechListening && styles.micButtonActive, !speechSupported && styles.micButtonDisabled]}
+                onPress={handleMicPress}
+                activeOpacity={0.85}
+                disabled={!speechSupported}>
+                <IconSymbol
+                  name="mic.fill"
+                  color={speechSupported ? palette.background : 'rgba(12,18,30,0.7)'}
+                  size={18}
+                />
+              </TouchableOpacity>
+            ) : null}
           </View>
+          {enabled ? (
+            <>
+              <View style={styles.controlsRow}>
+                <AppButton
+                  label="Minimize"
+                  variant="secondary"
+                  onPress={closeAssistant}
+                  style={styles.controlButton}
+                />
+              </View>
+              {!speechSupported ? (
+                <Text style={styles.speechNotice}>
+                  {Platform.OS === 'web'
+                    ? 'Voice input is only available on supported browsers like Chrome (desktop) over HTTPS.'
+                    : 'Install the package @react-native-voice/voice and grant microphone permissions to enable voice input on this device.'}
+                </Text>
+              ) : null}
+            </>
+          ) : null}
           <Text style={styles.hint}>{COMMAND_HELP}</Text>
         </LinearGradient>
       </KeyboardAvoidingView>
@@ -250,11 +302,13 @@ const styles = StyleSheet.create({
     color: palette.accentBright,
     fontWeight: '600',
   },
+  suggestionsWrapper: {
+    marginTop: 12,
+  },
   suggestionsRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: 8,
-    marginTop: 12,
+    paddingRight: 12,
   },
   suggestionChip: {
     paddingVertical: 6,
@@ -271,10 +325,34 @@ const styles = StyleSheet.create({
   controlsRow: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
+    alignItems: 'center',
+    gap: 12,
     marginTop: 12,
   },
   controlButton: {
     minWidth: 120,
+  },
+  micButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(124, 131, 255, 0.25)',
+    borderWidth: 1,
+    borderColor: 'rgba(124, 131, 255, 0.45)',
+  },
+  micButtonActive: {
+    backgroundColor: palette.accent,
+    borderColor: 'rgba(255,255,255,0.7)',
+  },
+  micButtonDisabled: {
+    opacity: 0.5,
+  },
+  speechNotice: {
+    marginTop: 8,
+    color: palette.textMuted,
+    fontSize: 12,
   },
   flowHint: {
     color: palette.textMuted,
