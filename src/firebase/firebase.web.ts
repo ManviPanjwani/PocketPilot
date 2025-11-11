@@ -19,6 +19,9 @@ if (!firebase.apps.length) {
 
 const app = firebase.app();
 const firebaseAuth = firebase.auth();
+firebaseAuth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(() => {
+  // ignore, browser defaults to session storage if local not available
+});
 const db = firebase.firestore();
 const storage = firebase.storage();
 

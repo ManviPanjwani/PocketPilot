@@ -25,6 +25,20 @@ In the output, you'll find options to open the app in a
 
 You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
 
+## Deploy to Vercel (Web)
+
+PocketPilot ships a responsive web build using Expo Router, so you can host it on Vercel:
+
+1. Install dependencies: `npm install`.
+2. Build locally to verify: `npx expo export --platform web --output-dir dist`.
+3. Push your changes to Git, then create a new Vercel project pointing at this repository.
+4. In the Vercel “Build & Output” settings set:
+   - **Build Command**: `npx expo export --platform web --output-dir dist`
+   - **Output Directory**: `dist`
+5. If you later move Firebase config into env vars, mirror them in Vercel’s Environment tab.
+
+Vercel will cache dependencies and redeploy automatically on every push to the selected branch.
+
 ## Get a fresh project
 
 When you're ready, run:
