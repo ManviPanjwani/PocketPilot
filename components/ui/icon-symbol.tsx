@@ -20,6 +20,14 @@ const MAPPING = {
   'chevron.right': 'chevron-right',
   'mic.fill': 'mic',
   sparkles: 'auto-awesome',
+  'lock.fill': 'lock',
+  'creditcard.fill': 'credit-card',
+  'chart.bar.fill': 'bar-chart',
+  'person.2.fill': 'groups',
+  'clock.fill': 'schedule',
+  'shield.checkerboard': 'verified-user',
+  'eye.fill': 'visibility',
+  'eye.slash.fill': 'visibility-off',
 } as IconMapping;
 
 /**

@@ -4,6 +4,7 @@ import {
   FlatList,
   Modal,
   Platform,
+  ScrollView,
   StyleSheet,
   Switch,
   Text,
@@ -19,6 +20,8 @@ import {
   deleteExpense,
 } from '@/services/expenses';
 import { AppButton } from '@/components/ui/AppButton';
+import { IconSymbol } from '@/components/ui/icon-symbol';
+import { LinearGradient } from '@/utils/LinearGradient';
 import { palette, cardShadow } from '@/styles/palette';
 import { Fonts } from '@/constants/theme';
 
@@ -41,6 +44,14 @@ const createParticipantDraft = (amount: string = '0.00') => ({
 
 type DraftParticipant = ReturnType<typeof createParticipantDraft> | ReturnType<typeof createSelfDraft>;
 
+const RANGE_OPTIONS = [
+  { id: '7d', label: '7 days' },
+  { id: '30d', label: '30 days' },
+  { id: 'all', label: 'All time' },
+] as const;
+
+type RangeFilter = (typeof RANGE_OPTIONS)[number]['id'];
+
 export default function TransactionsScreen() {
   const [items, setItems] = useState<Expense[]>([]);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
@@ -51,6 +62,7 @@ export default function TransactionsScreen() {
   const [categoryDraft, setCategoryDraft] = useState('');
   const [noteDraft, setNoteDraft] = useState('');
   const [saving, setSaving] = useState(false);
+  const [range, setRange] = useState<RangeFilter>('all');
 
   const dateFormatter = useMemo(
     () =>
@@ -65,6 +77,35 @@ export default function TransactionsScreen() {
     const unsubscribe = observeRecentExpenses(50, setItems);
     return unsubscribe;
   }, []);
+
+  const filteredItems = useMemo(() => {
+    if (range === 'all') return items;
+    const days = range === '7d' ? 7 : 30;
+    const now = Date.now();
+    const cutoff = now - days * 24 * 60 * 60 * 1000;
+    return items.filter((expense) => {
+      const created = getExpenseDate(expense);
+      if (!created) return true;
+      return created.getTime() >= cutoff;
+    });
+  }, [items, range]);
+
+  const summary = useMemo(() => {
+    if (!filteredItems.length) {
+      return { total: 0, avg: 0, entries: 0, topCategory: '—' };
+    }
+    const total = filteredItems.reduce((sum, expense) => sum + expense.amount, 0);
+    const entries = filteredItems.length;
+    const avg = total / entries;
+    const categoryMap = new Map<string, number>();
+    filteredItems.forEach((expense) => {
+      const key = expense.category || 'Uncategorized';
+      categoryMap.set(key, (categoryMap.get(key) || 0) + expense.amount);
+    });
+    const topCategory =
+      Array.from(categoryMap.entries()).sort((a, b) => b[1] - a[1])[0]?.[0] ?? '—';
+    return { total, avg, entries, topCategory };
+  }, [filteredItems]);
 
   const totalNumber = Number(totalDraft.trim()) || 0;
   const others = participantsDraft.filter((participant) => !participant.isSelf);
@@ -254,18 +295,66 @@ export default function TransactionsScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Recent Transactions</Text>
-      <FlatList
-        data={items}
-        keyExtractor={(item) => item.id!}
-        ItemSeparatorComponent={() => <View style={{ height: 16 }} />}
+    <LinearGradient colors={['#030b18', '#101c2f']} style={styles.background}>
+      <View style={styles.container}>
+        <FlatList
+          data={filteredItems}
+          keyExtractor={(item) => item.id!}
+          ItemSeparatorComponent={() => <View style={{ height: 16 }} />}
+          ListHeaderComponent={
+            <View style={styles.header}>
+              <View style={styles.summaryCard}>
+                <View style={styles.summaryColumn}>
+                  <Text style={styles.summaryEyebrow}>Spent in view</Text>
+                  <Text style={styles.summaryValue}>${summary.total.toFixed(2)}</Text>
+                  <Text style={styles.summaryMeta}>
+                    {summary.entries} {summary.entries === 1 ? 'entry' : 'entries'}
+                  </Text>
+                </View>
+                <View style={styles.summaryDivider} />
+                <View style={styles.summaryColumn}>
+                  <Text style={styles.summaryEyebrow}>Average</Text>
+                  <Text style={styles.summaryValueSmall}>${summary.avg.toFixed(2)}</Text>
+                  <Text style={styles.summaryMeta}>Top category: {summary.topCategory}</Text>
+                </View>
+              </View>
+              <View style={styles.filterRow}>
+                {RANGE_OPTIONS.map((option) => {
+                  const active = option.id === range;
+                  return (
+                    <TouchableOpacity
+                      key={option.id}
+                      style={[styles.filterChip, active && styles.filterChipActive]}
+                      onPress={() => setRange(option.id)}>
+                      <Text style={[styles.filterText, active && styles.filterTextActive]}>
+                        {option.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+              <Text style={styles.title}>Recent Transactions</Text>
+            </View>
+          }
+          ListHeaderComponentStyle={{ marginBottom: 16 }}
         renderItem={({ item }) => (
           <View style={styles.card}>
-            <Text style={styles.rowTop}>${item.amount.toFixed(2)}</Text>
-            <Text style={styles.rowSub}>{item.category || 'Uncategorized'}</Text>
-            <Text style={styles.timestamp}>{formatTimestamp(item, dateFormatter)}</Text>
-            {item.note ? <Text style={styles.note}>{item.note}</Text> : null}
+            <View style={styles.cardHeader}>
+              <View>
+                <Text style={styles.cardAmount}>${item.amount.toFixed(2)}</Text>
+                <Text style={styles.cardCategory}>{item.category || 'Uncategorized'}</Text>
+              </View>
+              <View style={styles.cardTime}>
+                <IconSymbol name="clock.fill" size={16} color={palette.textMuted} />
+                <Text style={styles.timestamp}>{formatTimestamp(item, dateFormatter)}</Text>
+              </View>
+            </View>
+            {item.note ? (
+              <View style={styles.notePill}>
+                <IconSymbol name="paperplane.fill" size={14} color={palette.accentBright} />
+                <Text style={styles.note}>{item.note}</Text>
+              </View>
+            ) : null}
             {Array.isArray(item.splits) && item.splits.length > 0 ? (
               <View style={styles.splitSummary}>
                 <Text style={styles.splitTotal}>
@@ -279,16 +368,21 @@ export default function TransactionsScreen() {
               </View>
             ) : null}
             <View style={styles.actionsRow}>
-              <TouchableOpacity onPress={() => openEditModal(item)}>
+              <TouchableOpacity style={styles.actionPill} onPress={() => openEditModal(item)}>
                 <Text style={styles.actionButton}>Edit</Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={() => confirmDelete(item)}>
+              <TouchableOpacity
+                style={[styles.actionPill, styles.deletePill]}
+                onPress={() => confirmDelete(item)}>
                 <Text style={[styles.actionButton, styles.deleteButton]}>Delete</Text>
               </TouchableOpacity>
             </View>
           </View>
         )}
-        ListEmptyComponent={<Text style={styles.empty}>No expenses yet</Text>}
+        ListEmptyComponent={
+          <Text style={styles.empty}>No expenses yet — log one to see it land here.</Text>
+        }
+        contentContainerStyle={{ paddingBottom: 32 }}
       />
 
       <Modal
@@ -298,115 +392,185 @@ export default function TransactionsScreen() {
         onRequestClose={closeModal}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Edit transaction</Text>
+            <ScrollView
+              contentContainerStyle={styles.modalContent}
+              showsVerticalScrollIndicator={false}>
+              <Text style={styles.modalTitle}>Edit transaction</Text>
 
-            <Text style={styles.modalLabel}>Total amount *</Text>
-            <TextInput
-              style={styles.modalInput}
-              keyboardType="decimal-pad"
-              placeholder="Total"
-              value={totalDraft}
-              onChangeText={(text) => {
-                setTotalDraft(text);
-              }}
-            />
+              <Text style={styles.modalLabel}>Total amount *</Text>
+              <TextInput
+                style={styles.modalInput}
+                keyboardType="decimal-pad"
+                placeholder="Total"
+                value={totalDraft}
+                onChangeText={(text) => {
+                  setTotalDraft(text);
+                }}
+              />
 
-            <View style={styles.modalSplitRow}>
-              <Text style={styles.modalLabel}>Split expense</Text>
-              <Switch value={isSplitDraft} onValueChange={toggleSplitDraft} />
-            </View>
+              <View style={styles.modalSplitRow}>
+                <Text style={styles.modalLabel}>Split expense</Text>
+                <Switch value={isSplitDraft} onValueChange={toggleSplitDraft} />
+              </View>
 
-            {participantsDraft.map((participant, index) => (
-              <View key={participant.id} style={styles.participantCard}>
-                <View style={styles.participantHeader}>
-                  <Text style={styles.participantTitle}>
-                    {participant.isSelf ? 'Your share *' : `Participant ${index}`}
-                  </Text>
+              {participantsDraft.map((participant, index) => (
+                <View key={participant.id} style={styles.participantCard}>
+                  <View style={styles.participantHeader}>
+                    <Text style={styles.participantTitle}>
+                      {participant.isSelf ? 'Your share *' : `Participant ${index}`}
+                    </Text>
+                    {!participant.isSelf && (
+                      <TouchableOpacity onPress={() => removeParticipantDraft(participant.id)}>
+                        <Text style={styles.removeParticipant}>Remove</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+
                   {!participant.isSelf && (
-                    <TouchableOpacity onPress={() => removeParticipantDraft(participant.id)}>
-                      <Text style={styles.removeParticipant}>Remove</Text>
-                    </TouchableOpacity>
+                    <TextInput
+                      style={styles.modalInput}
+                      placeholder="Name"
+                      value={participant.name}
+                      onChangeText={(text) => updateParticipantDraft(participant.id, { name: text })}
+                    />
                   )}
-                </View>
 
-                {!participant.isSelf && (
                   <TextInput
                     style={styles.modalInput}
-                    placeholder="Name"
-                    value={participant.name}
-                    onChangeText={(text) => updateParticipantDraft(participant.id, { name: text })}
+                    keyboardType="decimal-pad"
+                    placeholder="Share"
+                    value={participant.amount}
+                    onChangeText={(text) => updateParticipantDraft(participant.id, { amount: text })}
                   />
-                )}
+                </View>
+              ))}
 
-                <TextInput
-                  style={styles.modalInput}
-                  keyboardType="decimal-pad"
-                  placeholder="Share"
-                  value={participant.amount}
-                  onChangeText={(text) => updateParticipantDraft(participant.id, { amount: text })}
+              {isSplitDraft ? (
+                <TouchableOpacity style={styles.addParticipantButton} onPress={addParticipantDraft}>
+                  <Text style={styles.addParticipantText}>+ Add participant</Text>
+                </TouchableOpacity>
+              ) : null}
+
+              <View
+                style={[
+                  styles.differenceBanner,
+                  Math.abs(difference) > 0.01
+                    ? styles.differenceWarning
+                    : styles.differenceResolved,
+                ]}>
+                <Text style={styles.differenceText}>
+                  {Math.abs(difference) > 0.01
+                    ? `Adjust shares by $${formatAmount(Math.abs(difference))} to match the total.`
+                    : 'All shares add up to the total.'}
+                </Text>
+              </View>
+
+              <TextInput
+                style={styles.modalInput}
+                placeholder="Category (optional)"
+                value={categoryDraft}
+                onChangeText={setCategoryDraft}
+              />
+              <TextInput
+                style={[styles.modalInput, styles.modalTextarea]}
+                placeholder="Note (optional)"
+                value={noteDraft}
+                onChangeText={setNoteDraft}
+                multiline
+              />
+
+              <View style={styles.modalActions}>
+                <AppButton
+                  label="Cancel"
+                  variant="secondary"
+                  onPress={closeModal}
+                  disabled={saving}
+                  style={styles.modalActionButton}
+                />
+                <AppButton
+                  label="Save"
+                  onPress={handleSave}
+                  loading={saving}
+                  disabled={saving}
+                  style={[styles.modalActionButton, styles.modalPrimaryAction]}
                 />
               </View>
-            ))}
-
-            {isSplitDraft ? (
-              <TouchableOpacity style={styles.addParticipantButton} onPress={addParticipantDraft}>
-                <Text style={styles.addParticipantText}>+ Add participant</Text>
-              </TouchableOpacity>
-            ) : null}
-
-            <View
-              style={[
-                styles.differenceBanner,
-                Math.abs(difference) > 0.01
-                  ? styles.differenceWarning
-                  : styles.differenceResolved,
-              ]}>
-              <Text style={styles.differenceText}>
-                {Math.abs(difference) > 0.01
-                  ? `Adjust shares by $${formatAmount(Math.abs(difference))} to match the total.`
-                  : 'All shares add up to the total.'}
-              </Text>
-            </View>
-
-            <TextInput
-              style={styles.modalInput}
-              placeholder="Category (optional)"
-              value={categoryDraft}
-              onChangeText={setCategoryDraft}
-            />
-            <TextInput
-              style={[styles.modalInput, styles.modalTextarea]}
-              placeholder="Note (optional)"
-              value={noteDraft}
-              onChangeText={setNoteDraft}
-              multiline
-            />
-
-            <View style={styles.modalActions}>
-              <AppButton
-                label="Cancel"
-                variant="secondary"
-                onPress={closeModal}
-                disabled={saving}
-                style={styles.modalActionButton}
-              />
-              <AppButton
-                label="Save"
-                onPress={handleSave}
-                loading={saving}
-                disabled={saving}
-                style={[styles.modalActionButton, styles.modalPrimaryAction]}
-              />
-            </View>
+            </ScrollView>
           </View>
         </View>
       </Modal>
-    </View>
+      </View>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: palette.background, padding: 24 },
+  background: { flex: 1 },
+  container: { flex: 1, padding: 24 },
+  header: { gap: 12 },
+  summaryCard: {
+    backgroundColor: 'rgba(16,28,51,0.94)',
+    borderRadius: 24,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(124,131,255,0.25)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    ...cardShadow,
+  },
+  summaryColumn: {
+    flex: 1,
+    gap: 6,
+  },
+  summaryEyebrow: {
+    color: palette.textMuted,
+    fontSize: 12,
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+  },
+  summaryValue: {
+    color: palette.textPrimary,
+    fontSize: 28,
+    fontWeight: '700',
+  },
+  summaryValueSmall: {
+    color: palette.textPrimary,
+    fontSize: 22,
+    fontWeight: '700',
+  },
+  summaryMeta: {
+    color: palette.textSecondary,
+    fontSize: 13,
+  },
+  summaryDivider: {
+    width: 1,
+    height: '70%',
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    marginHorizontal: 16,
+  },
+  filterRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  filterChip: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.15)',
+    alignItems: 'center',
+  },
+  filterChipActive: {
+    backgroundColor: palette.accent,
+    borderColor: 'rgba(255,255,255,0.4)',
+  },
+  filterText: {
+    color: palette.textSecondary,
+    fontWeight: '600',
+  },
+  filterTextActive: {
+    color: palette.background,
+  },
   title: {
     color: palette.textPrimary,
     fontSize: 24,
@@ -423,20 +587,54 @@ const styles = StyleSheet.create({
     gap: 12,
     ...cardShadow,
   },
-  rowTop: { color: palette.textPrimary, fontSize: 20, fontWeight: '700' },
-  rowSub: { color: palette.textSecondary, marginTop: 4 },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: 16,
+  },
+  cardAmount: { color: palette.textPrimary, fontSize: 22, fontWeight: '700' },
+  cardCategory: {
+    marginTop: 4,
+    color: palette.textSecondary,
+    fontWeight: '600',
+  },
+  cardTime: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
   timestamp: { color: palette.textMuted, marginTop: 2, fontSize: 13 },
-  note: { color: palette.textSecondary, marginTop: 8, fontStyle: 'italic' },
+  notePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    padding: 10,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+  },
+  note: { color: palette.textSecondary, flex: 1 },
   empty: { color: palette.textSecondary, marginTop: 32, textAlign: 'center' },
   actionsRow: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
-    gap: 16,
+    gap: 10,
     marginTop: 16,
   },
   actionButton: {
     color: palette.accentBright,
     fontWeight: '600',
+  },
+  actionPill: {
+    paddingVertical: 6,
+    paddingHorizontal: 16,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.15)',
+  },
+  deletePill: {
+    borderColor: 'rgba(248,113,113,0.4)',
+    backgroundColor: 'rgba(248,113,113,0.1)',
   },
   deleteButton: {
     color: palette.danger,
@@ -467,11 +665,13 @@ const styles = StyleSheet.create({
     width: '100%',
     backgroundColor: palette.surface,
     borderRadius: 24,
-    padding: 24,
-    gap: 16,
     borderWidth: 1,
     borderColor: palette.border,
     ...cardShadow,
+  },
+  modalContent: {
+    padding: 24,
+    gap: 16,
   },
   modalTitle: {
     color: palette.textPrimary,
@@ -572,4 +772,19 @@ function formatTimestamp(item: Expense, formatter: Intl.DateTimeFormat) {
   }
 
   return 'Date pending…';
+}
+
+function getExpenseDate(item: Expense): Date | null {
+  if (item.createdAt && typeof item.createdAt.toDate === 'function') {
+    try {
+      return item.createdAt.toDate();
+    } catch {
+      return null;
+    }
+  }
+  if (item.createdAtISO) {
+    const date = new Date(item.createdAtISO);
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+  return null;
 }

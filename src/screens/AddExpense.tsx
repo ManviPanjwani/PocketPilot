@@ -13,6 +13,8 @@ import {
 
 import { addExpense } from '@/services/expenses';
 import { AppButton } from '@/components/ui/AppButton';
+import { IconSymbol } from '@/components/ui/icon-symbol';
+import { LinearGradient } from '@/utils/LinearGradient';
 import { palette, cardShadow } from '@/styles/palette';
 import { Fonts } from '@/constants/theme';
 
@@ -210,13 +212,47 @@ export default function AddExpense() {
     }
   }
 
+  const participantCount = others.length + 1;
+  const helperLine = isSplit
+    ? `Splitting with ${participantCount - 1} friend${participantCount - 1 === 1 ? '' : 's'}.`
+    : 'Logging a solo expense.';
+
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.content}
-      showsVerticalScrollIndicator={false}>
+    <LinearGradient colors={['#030b18', '#101c2f']} style={styles.background}>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}>
       <View style={styles.form}>
         <Text style={styles.heading}>Add Expense</Text>
+
+        <View style={styles.heroCard}>
+          <View style={styles.heroHeader}>
+            <View>
+              <Text style={styles.heroLabel}>Planned total</Text>
+              <Text style={styles.heroValue}>${formatAmount(totalNumber)}</Text>
+            </View>
+            <View style={styles.heroIcon}>
+              <IconSymbol name="paperplane.fill" size={20} color={palette.background} />
+            </View>
+          </View>
+          <View style={styles.heroStatsRow}>
+            <View style={styles.heroStat}>
+              <Text style={styles.heroStatLabel}>Your share</Text>
+              <Text style={styles.heroStatValue}>${formatAmount(myShare)}</Text>
+            </View>
+            <View style={styles.heroDivider} />
+            <View style={styles.heroStat}>
+              <Text style={styles.heroStatLabel}>Participants</Text>
+              <Text style={styles.heroStatValue}>{participantCount}</Text>
+            </View>
+          </View>
+          <Text style={styles.heroHint}>
+            {Math.abs(difference) > 0.01
+              ? `Fine tune shares by $${formatAmount(Math.abs(difference))}.`
+              : helperLine}
+          </Text>
+        </View>
 
         <Text style={styles.label}>Total amount *</Text>
         <TextInput
@@ -310,6 +346,21 @@ export default function AddExpense() {
         </View>
 
         <Text style={styles.label}>Category</Text>
+        <View style={styles.categoryChips}>
+          {categories.slice(0, 6).map((option) => {
+            const selected = category === option;
+            return (
+              <TouchableOpacity
+                key={`quick-${option}`}
+                style={[styles.categoryChip, selected && styles.categoryChipActive]}
+                onPress={() => setCategory(option)}>
+                <Text style={[styles.categoryChipText, selected && styles.categoryChipTextActive]}>
+                  {option}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
         <Pressable
           style={styles.dropdown}
           onPress={() => setShowCategoryPicker((current) => !current)}>
@@ -362,12 +413,16 @@ export default function AddExpense() {
           disabled={busy}
         />
       </View>
-    </ScrollView>
+      </ScrollView>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: palette.background },
+  background: {
+    flex: 1,
+  },
+  container: { flex: 1 },
   content: { padding: 24, paddingBottom: 64 },
   form: { flex: 1, gap: 18 },
   heading: {
@@ -376,6 +431,68 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontFamily: Fonts.rounded,
     marginBottom: 8,
+  },
+  heroCard: {
+    backgroundColor: 'rgba(16,28,51,0.92)',
+    borderRadius: 24,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(124,131,255,0.25)',
+    gap: 12,
+    ...cardShadow,
+  },
+  heroHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  heroLabel: {
+    color: palette.textSecondary,
+    fontSize: 13,
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+  },
+  heroValue: {
+    color: palette.textPrimary,
+    fontSize: 32,
+    fontWeight: '700',
+  },
+  heroIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: palette.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  heroStatsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(6,11,22,0.6)',
+    borderRadius: 18,
+    padding: 14,
+  },
+  heroStat: {
+    flex: 1,
+    gap: 4,
+  },
+  heroStatLabel: {
+    color: palette.textMuted,
+    fontSize: 12,
+  },
+  heroStatValue: {
+    color: palette.textPrimary,
+    fontWeight: '700',
+    fontSize: 18,
+  },
+  heroDivider: {
+    width: 1,
+    height: '80%',
+    backgroundColor: 'rgba(255,255,255,0.08)',
+  },
+  heroHint: {
+    color: palette.textSecondary,
+    fontSize: 13,
   },
   label: {
     color: palette.textMuted,
@@ -522,6 +639,31 @@ const styles = StyleSheet.create({
   dropdownCaret: {
     color: palette.accentBright,
     fontSize: 12,
+  },
+  categoryChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 6,
+  },
+  categoryChip: {
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: palette.border,
+  },
+  categoryChipActive: {
+    backgroundColor: palette.accentMuted,
+    borderColor: palette.accentBright,
+  },
+  categoryChipText: {
+    color: palette.textSecondary,
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  categoryChipTextActive: {
+    color: palette.textPrimary,
   },
   dropdownList: {
     backgroundColor: palette.surfaceElevated,
