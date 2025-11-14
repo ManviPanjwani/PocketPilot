@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   ActivityIndicator,
   GestureResponderEvent,
@@ -10,7 +10,8 @@ import {
   ViewStyle,
 } from 'react-native';
 
-import { palette } from '@/styles/palette';
+import { Palette } from '@/styles/palette';
+import { useAppTheme } from '@/styles/ThemeProvider';
 
 type ButtonVariant = 'primary' | 'secondary' | 'danger';
 
@@ -33,8 +34,10 @@ export function AppButton({
   style,
   textStyle,
 }: Props) {
+  const { palette } = useAppTheme();
+  const styles = useMemo(() => createStyles(palette), [palette]);
   const isDisabled = disabled || loading;
-  const indicatorColor = variant === 'primary' || variant === 'danger' ? palette.background : palette.textPrimary;
+  const indicatorColor = variant === 'primary' || variant === 'danger' ? palette.onAccent : palette.textPrimary;
 
   return (
     <TouchableOpacity
@@ -49,45 +52,46 @@ export function AppButton({
   );
 }
 
-const styles = StyleSheet.create({
-  base: {
-    minHeight: 48,
-    paddingHorizontal: 20,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexDirection: 'row',
-    gap: 8,
-  },
-  primary: {
-    backgroundColor: palette.accent,
-  },
-  primaryLabel: {
-    color: palette.background,
-  },
-  secondary: {
-    backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: palette.border,
-  },
-  secondaryLabel: {
-    color: palette.textPrimary,
-  },
-  danger: {
-    backgroundColor: palette.danger,
-  },
-  dangerLabel: {
-    color: palette.background,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: '600',
-    letterSpacing: 0.2,
-  },
-  disabled: {
-    opacity: 0.6,
-  },
-  spinner: {
-    marginRight: 6,
-  },
-});
+const createStyles = (palette: Palette) =>
+  StyleSheet.create({
+    base: {
+      minHeight: 48,
+      paddingHorizontal: 20,
+      borderRadius: 14,
+      alignItems: 'center',
+      justifyContent: 'center',
+      flexDirection: 'row',
+      gap: 8,
+    },
+    primary: {
+      backgroundColor: palette.accent,
+    },
+    primaryLabel: {
+      color: palette.onAccent,
+    },
+    secondary: {
+      backgroundColor: 'transparent',
+      borderWidth: 1,
+      borderColor: palette.border,
+    },
+    secondaryLabel: {
+      color: palette.textPrimary,
+    },
+    danger: {
+      backgroundColor: palette.danger,
+    },
+    dangerLabel: {
+      color: palette.onAccent,
+    },
+    label: {
+      fontSize: 16,
+      fontWeight: '600',
+      letterSpacing: 0.2,
+    },
+    disabled: {
+      opacity: 0.6,
+    },
+    spinner: {
+      marginRight: 6,
+    },
+  });

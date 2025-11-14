@@ -1,4 +1,4 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
+import { DarkTheme, DefaultTheme, ThemeProvider as NavigationThemeProvider } from '@react-navigation/native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useState } from 'react';
@@ -12,6 +12,7 @@ import { firebaseAuth } from '@/src/firebase';
 import { AssistantProvider } from '@/assistant/AssistantContext';
 import { AssistantOverlay } from '@/components/assistant/AssistantOverlay';
 import { AssistantFab } from '@/components/assistant/AssistantFab';
+import { ThemeProvider as AppThemeProvider } from '@/styles/ThemeProvider';
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -41,35 +42,39 @@ export default function RootLayout() {
 
   if (checkingAuth) {
     return (
-      <ThemeProvider value={theme}>
-        <StatusBar style="auto" />
-        <View style={backgroundStyle}>
-          <ActivityIndicator size="large" />
-        </View>
-      </ThemeProvider>
+      <AppThemeProvider>
+        <NavigationThemeProvider value={theme}>
+          <StatusBar style="auto" />
+          <View style={backgroundStyle}>
+            <ActivityIndicator size="large" />
+          </View>
+        </NavigationThemeProvider>
+      </AppThemeProvider>
     );
   }
 
   return (
-    <AssistantProvider enabled={authed}>
-      <ThemeProvider value={theme}>
-        {authed ? (
-          <>
-            <Stack>
-              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-              <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-            </Stack>
-            <StatusBar style="auto" />
-          </>
-        ) : (
-          <>
-            <StatusBar style="light" />
-            <LoginScreen />
-          </>
-        )}
-        <AssistantOverlay />
-        <AssistantFab />
-      </ThemeProvider>
-    </AssistantProvider>
+    <AppThemeProvider>
+      <AssistantProvider enabled={authed}>
+        <NavigationThemeProvider value={theme}>
+          {authed ? (
+            <>
+              <Stack>
+                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+              </Stack>
+              <StatusBar style="auto" />
+            </>
+          ) : (
+            <>
+              <StatusBar style="light" />
+              <LoginScreen />
+            </>
+          )}
+          <AssistantOverlay />
+          <AssistantFab />
+        </NavigationThemeProvider>
+      </AssistantProvider>
+    </AppThemeProvider>
   );
 }

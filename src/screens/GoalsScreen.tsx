@@ -14,8 +14,9 @@ import { Goal, observeGoals, addGoal, deleteGoal } from '@/services/goals';
 import { observeMonthlySummary, MonthlySummary } from '@/services/expenses';
 import { observeUserProfile, UserProfile } from '@/services/profile';
 import { AppButton } from '@/components/ui/AppButton';
-import { palette, cardShadow } from '@/styles/palette';
+import { cardShadow, Palette } from '@/styles/palette';
 import { Fonts } from '@/constants/theme';
+import { useAppTheme } from '@/styles/ThemeProvider';
 
 const currencyFormatter = new Intl.NumberFormat(undefined, {
   style: 'currency',
@@ -32,6 +33,8 @@ const normalizeCategoryLabel = (raw?: string | null, fallback?: string) => {
 };
 
 export default function GoalsScreen() {
+  const { palette } = useAppTheme();
+  const styles = useMemo(() => createStyles(palette), [palette]);
   const [goals, setGoals] = useState<Goal[]>([]);
   const [title, setTitle] = useState('');
   const [target, setTarget] = useState('');
@@ -341,7 +344,8 @@ export default function GoalsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (palette: Palette) =>
+  StyleSheet.create({
   list: {
     flex: 1,
     backgroundColor: palette.background,
@@ -458,7 +462,7 @@ const styles = StyleSheet.create({
   goalDeleteButtonText: {
     fontSize: 14,
   },
-});
+  });
 
 function computeSpent(goal: Goal, summary: MonthlySummary) {
   const categoryLabel = normalizeCategoryLabel(goal.category, goal.title);

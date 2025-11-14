@@ -15,8 +15,9 @@ import { addExpense } from '@/services/expenses';
 import { AppButton } from '@/components/ui/AppButton';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { LinearGradient } from '@/utils/LinearGradient';
-import { palette, cardShadow } from '@/styles/palette';
+import { cardShadow, Palette } from '@/styles/palette';
 import { Fonts } from '@/constants/theme';
+import { useAppTheme } from '@/styles/ThemeProvider';
 
 const formatAmount = (value: number) => (Number.isFinite(value) ? value.toFixed(2) : '0.00');
 
@@ -35,6 +36,8 @@ const createParticipant = (amount: string = '0.00'): Participant => ({
 const round = (value: number) => Math.round(value * 100) / 100;
 
 export default function AddExpense() {
+  const { palette, mode } = useAppTheme();
+  const styles = useMemo(() => createStyles(palette), [palette]);
   const [totalAmount, setTotalAmount] = useState('50.00');
   const [others, setOthers] = useState<Participant[]>([]);
   const [category, setCategory] = useState('');
@@ -217,8 +220,10 @@ export default function AddExpense() {
     ? `Splitting with ${participantCount - 1} friend${participantCount - 1 === 1 ? '' : 's'}.`
     : 'Logging a solo expense.';
 
+  const backgroundGradient = mode === 'light' ? ['#eef3ff', '#d9e3ff'] : ['#030b18', '#101c2f'];
+
   return (
-    <LinearGradient colors={['#030b18', '#101c2f']} style={styles.background}>
+    <LinearGradient colors={backgroundGradient} style={styles.background}>
       <ScrollView
         style={styles.container}
         contentContainerStyle={styles.content}
@@ -233,7 +238,7 @@ export default function AddExpense() {
               <Text style={styles.heroValue}>${formatAmount(totalNumber)}</Text>
             </View>
             <View style={styles.heroIcon}>
-              <IconSymbol name="paperplane.fill" size={20} color={palette.background} />
+              <IconSymbol name="paperplane.fill" size={20} color={palette.onAccent} />
             </View>
           </View>
           <View style={styles.heroStatsRow}>
@@ -418,7 +423,8 @@ export default function AddExpense() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (palette: Palette) =>
+  StyleSheet.create({
   background: {
     flex: 1,
   },
@@ -433,11 +439,11 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   heroCard: {
-    backgroundColor: 'rgba(16,28,51,0.92)',
+    backgroundColor: palette.surface,
     borderRadius: 24,
     padding: 20,
     borderWidth: 1,
-    borderColor: 'rgba(124,131,255,0.25)',
+    borderColor: palette.border,
     gap: 12,
     ...cardShadow,
   },
@@ -468,7 +474,7 @@ const styles = StyleSheet.create({
   heroStatsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(6,11,22,0.6)',
+    backgroundColor: palette.surfaceElevated,
     borderRadius: 18,
     padding: 14,
   },
@@ -488,7 +494,7 @@ const styles = StyleSheet.create({
   heroDivider: {
     width: 1,
     height: '80%',
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: palette.border,
   },
   heroHint: {
     color: palette.textSecondary,
@@ -599,7 +605,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   differenceWarning: {
-    backgroundColor: 'rgba(248, 113, 113, 0.15)',
+    backgroundColor: palette.surface,
     borderColor: palette.danger,
   },
   differenceResolved: {
@@ -688,4 +694,4 @@ const styles = StyleSheet.create({
     color: palette.textPrimary,
     fontWeight: '600',
   },
-});
+  });

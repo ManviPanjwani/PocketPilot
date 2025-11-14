@@ -2,8 +2,9 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { observeHistoricalSummaries, MonthlySummary } from '@/services/expenses';
-import { palette, cardShadow } from '@/styles/palette';
+import { cardShadow, Palette } from '@/styles/palette';
 import { LinearGradient } from '@/utils/LinearGradient';
+import { useAppTheme } from '@/styles/ThemeProvider';
 
 const MONTH_LABELS = [
   'January',
@@ -34,6 +35,8 @@ const currencyFormatter = new Intl.NumberFormat(undefined, {
 });
 
 export default function HistoryScreen() {
+  const { palette, mode } = useAppTheme();
+  const styles = useMemo(() => createStyles(palette), [palette]);
   const [summaries, setSummaries] = useState<Array<{ id: string; summary: MonthlySummary }>>([]);
   const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
 
@@ -52,6 +55,8 @@ export default function HistoryScreen() {
     () => summaries.find((item) => item.id === selectedMonth)?.summary ?? null,
     [summaries, selectedMonth],
   );
+
+  const detailGradient = mode === 'light' ? ['#e1e7ff', '#cbd5ff'] : ['#243357', '#101c33'];
 
   return (
     <ScrollView
@@ -83,7 +88,7 @@ export default function HistoryScreen() {
 
       {selectedSummary ? (
         <LinearGradient
-          colors={['#243357', '#101c33']}
+          colors={detailGradient}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.detailCard}>
@@ -124,7 +129,8 @@ export default function HistoryScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (palette: Palette) =>
+  StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: palette.background,
@@ -144,12 +150,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   timeline: {
-    backgroundColor: 'rgba(16, 28, 51, 0.92)',
+    backgroundColor: palette.surface,
     borderRadius: 24,
     padding: 16,
     gap: 12,
     borderWidth: 1,
-    borderColor: 'rgba(124, 131, 255, 0.12)',
+    borderColor: palette.border,
     ...cardShadow,
   },
   timelineEntry: {
@@ -161,7 +167,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
   },
   timelineEntryActive: {
-    backgroundColor: 'rgba(124, 131, 255, 0.15)',
+    backgroundColor: palette.accentMuted,
   },
   timelineDot: {
     width: 10,
@@ -183,7 +189,7 @@ const styles = StyleSheet.create({
   detailCard: {
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: 'rgba(124, 131, 255, 0.25)',
+    borderColor: palette.border,
     padding: 24,
     gap: 18,
     ...cardShadow,
@@ -208,11 +214,11 @@ const styles = StyleSheet.create({
   },
   summaryMetric: {
     flex: 1,
-    backgroundColor: 'rgba(16, 28, 51, 0.92)',
+    backgroundColor: palette.surface,
     borderRadius: 18,
     padding: 16,
     borderWidth: 1,
-    borderColor: 'rgba(124, 131, 255, 0.12)',
+    borderColor: palette.border,
     gap: 8,
   },
   summaryLabel: {
@@ -239,12 +245,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: 'rgba(16, 28, 51, 0.85)',
+    backgroundColor: palette.surfaceElevated,
     borderRadius: 16,
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderWidth: 1,
-    borderColor: 'rgba(124, 131, 255, 0.08)',
+    borderColor: palette.border,
   },
   categoryLabel: {
     color: palette.textPrimary,
@@ -254,4 +260,4 @@ const styles = StyleSheet.create({
     color: palette.textPrimary,
     fontWeight: '700',
   },
-});
+  });

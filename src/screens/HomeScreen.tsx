@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Switch } from 'react-native';
 import { LinearGradient } from '@/utils/LinearGradient';
 
 import { firebaseAuth } from '../firebase';
@@ -8,8 +8,10 @@ import { observeMonthlySummary, MonthlySummary } from '@/services/expenses';
 import { observeUserProfile, upsertUserProfile, UserProfile } from '@/services/profile';
 import { observeActivity, ActivityEntry } from '@/services/activity';
 import { AppButton } from '@/components/ui/AppButton';
-import { palette, cardShadow } from '@/styles/palette';
+import { cardShadow, Palette } from '@/styles/palette';
 import { Fonts } from '@/constants/theme';
+import { useAppTheme } from '@/styles/ThemeProvider';
+import { IconSymbol } from '@/components/ui/icon-symbol';
 
 let VictoryPie: any;
 
@@ -34,6 +36,8 @@ const percentFormatter = new Intl.NumberFormat(undefined, {
 const CATEGORY_COLORS = ['#4f46e5', '#10b981', '#f59e0b', '#f97316', '#a855f7', '#14b8a6'];
 
 export default function HomeScreen() {
+  const { palette, mode, setMode } = useAppTheme();
+  const styles = useMemo(() => createStyles(palette), [palette]);
   const [email, setEmail] = useState<string | null>(firebaseAuth.currentUser?.email ?? null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [summary, setSummary] = useState<MonthlySummary>({
@@ -158,6 +162,11 @@ export default function HomeScreen() {
   const spendRatio =
     summary.monthlyIncome > 0 ? Math.min(summary.totalSpent / summary.monthlyIncome, 1) : 0;
 
+  const heroGradient = mode === 'light' ? ['#dfe6ff', '#c7d4ff'] : ['#243357', '#101c33'];
+  const handleThemeToggle = (next: boolean) => {
+    void setMode(next ? 'light' : 'dark');
+  };
+
   return (
     <ScrollView
       style={styles.container}
@@ -168,13 +177,29 @@ export default function HomeScreen() {
           <Text style={styles.greeting}>Welcome back</Text>
           <Text style={styles.email}>{email ?? 'Not signed in'}</Text>
         </View>
-        <TouchableOpacity onPress={signOutUser} style={styles.logoutButton}>
-          <Text style={styles.logoutText}>Logout</Text>
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          <View>
+            <Text style={styles.themeToggleLabel}>Display</Text>
+            <View style={styles.themeToggle}>
+              <IconSymbol name="moon.stars.fill" size={14} color={palette.textSecondary} />
+              <Switch
+                value={mode === 'light'}
+                onValueChange={handleThemeToggle}
+                trackColor={{ false: palette.border, true: palette.accent }}
+                thumbColor={mode === 'light' ? palette.background : palette.textPrimary}
+                ios_backgroundColor={palette.border}
+              />
+              <IconSymbol name="sun.max.fill" size={14} color={palette.textSecondary} />
+            </View>
+          </View>
+          <TouchableOpacity onPress={signOutUser} style={styles.logoutButton}>
+            <Text style={styles.logoutText}>Logout</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <LinearGradient
-        colors={['#243357', '#101c33']}
+        colors={heroGradient}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.heroCard}>
@@ -367,7 +392,8 @@ export default function HomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (palette: Palette) =>
+  StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: palette.background,
@@ -381,6 +407,28 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+  },
+  headerActions: {
+    flexDirection: 'row',
+    gap: 12,
+    alignItems: 'center',
+  },
+  themeToggleLabel: {
+    color: palette.textMuted,
+    fontSize: 12,
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  themeToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: palette.border,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    justifyContent: 'center',
   },
   greeting: {
     color: palette.textSecondary,
@@ -409,7 +457,7 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     padding: 24,
     borderWidth: 1,
-    borderColor: 'rgba(124, 131, 255, 0.25)',
+    borderColor: palette.border,
     gap: 12,
     ...cardShadow,
   },
@@ -445,12 +493,12 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   card: {
-    backgroundColor: 'rgba(16, 28, 51, 0.92)',
+    backgroundColor: palette.surface,
     borderRadius: 24,
     padding: 24,
     gap: 16,
     borderWidth: 1,
-    borderColor: 'rgba(124, 131, 255, 0.12)',
+    borderColor: palette.border,
     ...cardShadow,
   },
   cardHeader: {
@@ -619,7 +667,7 @@ const styles = StyleSheet.create({
     color: palette.textPrimary,
     fontWeight: '600',
   },
-});
+  });
 
 function describeActivity(entry: ActivityEntry) {
   const formatter = new Intl.DateTimeFormat(undefined, {

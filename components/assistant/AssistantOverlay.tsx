@@ -17,8 +17,9 @@ import { COMMAND_HELP } from '@/assistant/commandHandlers';
 import type { FlowId } from '@/assistant/flows';
 import { AppButton } from '@/components/ui/AppButton';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { palette } from '@/styles/palette';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
+import { Palette } from '@/styles/palette';
+import { useAppTheme } from '@/styles/ThemeProvider';
 
 export function AssistantOverlay() {
   const {
@@ -91,6 +92,9 @@ export function AssistantOverlay() {
     { id: 'deleteExpense', label: 'Delete expense' },
   ];
 
+  const { palette } = useAppTheme();
+  const styles = useMemo(() => createStyles(palette), [palette]);
+
   return (
     <Modal visible={isOpen} animationType="fade" transparent onRequestClose={closeAssistant}>
       <KeyboardAvoidingView
@@ -147,7 +151,7 @@ export function AssistantOverlay() {
                   style={[styles.messageContainer, isUser ? styles.messageContainerUser : styles.messageContainerAssistant]}>
                   {!isUser ? (
                     <View style={styles.avatarBadge}>
-                      <IconSymbol name="sparkles" color={palette.background} size={16} />
+                      <IconSymbol name="sparkles" color={palette.onAccent} size={16} />
                     </View>
                   ) : null}
                   <View style={[styles.messageBubble, isUser ? styles.messageBubbleUser : styles.messageBubbleAssistant]}>
@@ -163,7 +167,7 @@ export function AssistantOverlay() {
             {processing ? (
               <View style={[styles.messageContainer, styles.messageContainerAssistant]}>
                 <View style={styles.avatarBadge}>
-                  <IconSymbol name="sparkles" color={palette.background} size={16} />
+                  <IconSymbol name="sparkles" color={palette.onAccent} size={16} />
                 </View>
                 <View style={[styles.messageBubble, styles.messageBubbleAssistant]}>
                   <Text style={styles.messageAuthorAssistant}>Assistant</Text>
@@ -215,7 +219,7 @@ export function AssistantOverlay() {
                 disabled={!speechSupported}>
                 <IconSymbol
                   name="mic.fill"
-                  color={speechSupported ? palette.background : 'rgba(12,18,30,0.7)'}
+                  color={speechSupported ? palette.onAccent : 'rgba(12,18,30,0.7)'}
                   size={18}
                 />
               </TouchableOpacity>
@@ -247,7 +251,8 @@ export function AssistantOverlay() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (palette: Palette) =>
+  StyleSheet.create({
   backdrop: {
     flex: 1,
     justifyContent: 'flex-end',
@@ -422,7 +427,7 @@ const styles = StyleSheet.create({
     color: palette.textMuted,
   },
   messageAuthorUser: {
-    color: palette.background,
+    color: palette.onAccent,
   },
   messageText: {
     color: palette.textPrimary,
@@ -430,7 +435,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   messageTextUser: {
-    color: palette.background,
+    color: palette.onAccent,
   },
   inputRow: {
     flexDirection: 'row',
@@ -457,4 +462,4 @@ const styles = StyleSheet.create({
     fontSize: 12,
     textAlign: 'center',
   },
-});
+  });

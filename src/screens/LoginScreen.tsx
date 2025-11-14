@@ -6,6 +6,7 @@ import {
   SafeAreaView,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   TouchableOpacity,
@@ -15,9 +16,10 @@ import { LinearGradient } from '@/utils/LinearGradient';
 
 import { AppButton } from '@/components/ui/AppButton';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { cardShadow, palette } from '@/styles/palette';
+import { cardShadow, Palette, darkPalette, lightPalette } from '@/styles/palette';
 import { Fonts } from '@/constants/theme';
 import { signIn, signUp } from '../services/auth';
+import { ThemeMode, useAppTheme } from '@/styles/ThemeProvider';
 
 const AUTH_TABS = [
   { id: 'login', label: 'Sign in' },
@@ -53,6 +55,70 @@ const SAMPLE_STATS = [
   { label: 'On-time streak', value: '12 days' },
 ];
 
+type LoginThemeConfig = {
+  mode: ThemeMode;
+  palette: Palette;
+  gradient: string[];
+  statCardBackground: string;
+  statCardBorder: string;
+  cardBackground: string;
+  cardBorder: string;
+  tabChipBorder: string;
+  tabChipActiveBorder: string;
+  inputBackground: string;
+  inputBorder: string;
+  tipChipBackground: string;
+  highlightChipBackground: string;
+  highlightChipBorder: string;
+  highlightCardBackground: string;
+  highlightCardBorder: string;
+  themeToggleBorder: string;
+  placeholderTextColor: string;
+};
+
+const LOGIN_THEME_CONFIG: Record<ThemeMode, LoginThemeConfig> = {
+  dark: {
+    mode: 'dark',
+    palette: darkPalette,
+    gradient: ['#030813', '#111d35'],
+    statCardBackground: 'rgba(255,255,255,0.05)',
+    statCardBorder: 'rgba(255,255,255,0.08)',
+    cardBackground: 'rgba(16,28,51,0.92)',
+    cardBorder: 'rgba(124,131,255,0.25)',
+    tabChipBorder: 'rgba(255,255,255,0.15)',
+    tabChipActiveBorder: 'rgba(255,255,255,0.4)',
+    inputBackground: 'rgba(6,11,22,0.9)',
+    inputBorder: 'rgba(124,131,255,0.35)',
+    tipChipBackground: 'rgba(255,255,255,0.05)',
+    highlightChipBackground: 'rgba(255,255,255,0.05)',
+    highlightChipBorder: 'rgba(255,255,255,0.08)',
+    highlightCardBackground: 'rgba(7,13,26,0.8)',
+    highlightCardBorder: 'rgba(124,131,255,0.2)',
+    themeToggleBorder: 'rgba(255,255,255,0.18)',
+    placeholderTextColor: 'rgba(232,240,254,0.4)',
+  },
+  light: {
+    mode: 'light',
+    palette: lightPalette,
+    gradient: ['#eff3ff', '#d6e0ff'],
+    statCardBackground: 'rgba(15,23,42,0.03)',
+    statCardBorder: 'rgba(15,23,42,0.08)',
+    cardBackground: '#ffffff',
+    cardBorder: 'rgba(15,23,42,0.08)',
+    tabChipBorder: 'rgba(15,23,42,0.12)',
+    tabChipActiveBorder: 'rgba(99,102,241,0.6)',
+    inputBackground: '#ffffff',
+    inputBorder: 'rgba(99,102,241,0.4)',
+    tipChipBackground: 'rgba(99,102,241,0.08)',
+    highlightChipBackground: 'rgba(99,102,241,0.05)',
+    highlightChipBorder: 'rgba(99,102,241,0.15)',
+    highlightCardBackground: '#f8faff',
+    highlightCardBorder: 'rgba(99,102,241,0.2)',
+    themeToggleBorder: 'rgba(15,23,42,0.1)',
+    placeholderTextColor: 'rgba(15,23,42,0.4)',
+  },
+};
+
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [pwd, setPwd] = useState('');
@@ -60,6 +126,12 @@ export default function LoginScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [selectedHighlight, setSelectedHighlight] = useState(0);
   const [showPassword, setShowPassword] = useState(false);
+  const { mode: themeMode, setMode: setThemeMode } = useAppTheme();
+
+  const theme = LOGIN_THEME_CONFIG[themeMode];
+  const themedPalette = theme.palette;
+  const styles = useMemo(() => createStyles(theme), [theme]);
+  const placeholderColor = theme.placeholderTextColor;
 
   const title = mode === 'login' ? 'Welcome back' : 'Create your account';
   const subtitle =
@@ -90,7 +162,7 @@ export default function LoginScreen() {
   };
 
   return (
-    <LinearGradient colors={['#030813', '#111d35']} style={styles.container}>
+    <LinearGradient colors={theme.gradient} style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
         <KeyboardAvoidingView
           style={styles.wrapper}
@@ -99,6 +171,33 @@ export default function LoginScreen() {
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled">
+            <View style={styles.themeToggleWrapper}>
+              <View>
+                <Text style={styles.themeToggleLabel}>Display</Text>
+                <Text style={styles.themeToggleCaption}>
+                  {themeMode === 'dark' ? 'Dark flight deck' : 'Bright runway'}
+                </Text>
+              </View>
+              <View style={styles.themeToggleSwitch}>
+                <IconSymbol
+                  name="moon.stars.fill"
+                  size={16}
+                  color={themedPalette.textSecondary}
+                />
+                <Switch
+                  value={themeMode === 'light'}
+                  onValueChange={(next) => void setThemeMode(next ? 'light' : 'dark')}
+                  trackColor={{
+                    false: theme.themeToggleBorder,
+                    true: theme.palette.accent,
+                  }}
+                  thumbColor={themeMode === 'light' ? themedPalette.background : themedPalette.textPrimary}
+                  ios_backgroundColor={theme.themeToggleBorder}
+                />
+                <IconSymbol name="sun.max.fill" size={16} color={themedPalette.textSecondary} />
+              </View>
+            </View>
+
             <View style={styles.brandSection}>
               <View style={styles.brandBadge}>
                 <Text style={styles.brandEmoji}>✈️</Text>
@@ -140,7 +239,7 @@ export default function LoginScreen() {
                 <TextInput
                   style={styles.input}
                   placeholder="you@example.com"
-                  placeholderTextColor="rgba(232,240,254,0.4)"
+                  placeholderTextColor={placeholderColor}
                   autoCapitalize="none"
                   keyboardType="email-address"
                   value={email}
@@ -154,7 +253,7 @@ export default function LoginScreen() {
                     <TextInput
                       style={[styles.input, styles.passwordInput]}
                       placeholder="Enter at least 6 characters"
-                      placeholderTextColor="rgba(232,240,254,0.4)"
+                      placeholderTextColor={placeholderColor}
                       secureTextEntry={!showPassword}
                       value={pwd}
                       onChangeText={setPwd}
@@ -167,7 +266,7 @@ export default function LoginScreen() {
                       <IconSymbol
                         name={showPassword ? 'eye.fill' : 'eye.slash.fill'}
                         size={18}
-                        color={palette.textSecondary}
+                        color={themedPalette.textSecondary}
                       />
                     </TouchableOpacity>
                   </View>
@@ -185,10 +284,10 @@ export default function LoginScreen() {
 
                 <View style={styles.tipsRow}>
                   {TIPS.map((tip) => (
-                    <View key={tip} style={styles.tipChip}>
-                      <IconSymbol name="sparkles" size={14} color={palette.accentBright} />
-                      <Text style={styles.tipText}>{tip}</Text>
-                    </View>
+                <View key={tip} style={styles.tipChip}>
+                  <IconSymbol name="sparkles" size={14} color={themedPalette.accentBright} />
+                  <Text style={styles.tipText}>{tip}</Text>
+                </View>
                   ))}
                 </View>
               </View>
@@ -207,7 +306,7 @@ export default function LoginScreen() {
                       <IconSymbol
                         name={item.icon}
                         size={16}
-                        color={active ? palette.background : item.accent}
+                        color={active ? themedPalette.background : item.accent}
                       />
                       <Text style={[styles.highlightChipText, active && styles.highlightChipTextActive]}>
                         {item.title}
@@ -231,224 +330,252 @@ export default function LoginScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  safeArea: {
-    flex: 1,
-  },
-  wrapper: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: 24,
-    paddingBottom: 48,
-    gap: 24,
-  },
-  brandSection: {
-    gap: 16,
-  },
-  brandBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-  },
-  brandEmoji: {
-    fontSize: 40,
-  },
-  brandName: {
-    color: palette.textPrimary,
-    fontSize: 26,
-    fontFamily: Fonts.rounded,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-  },
-  brandTagline: {
-    color: palette.textSecondary,
-    fontSize: 14,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  statCard: {
-    flexGrow: 1,
-    minWidth: 110,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderRadius: 16,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-  },
-  statValue: {
-    color: palette.textPrimary,
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  statLabel: {
-    color: palette.textSecondary,
-    fontSize: 12,
-    marginTop: 4,
-  },
-  card: {
-    backgroundColor: 'rgba(16,28,51,0.92)',
-    borderRadius: 28,
-    padding: 24,
-    borderWidth: 1,
-    borderColor: 'rgba(124,131,255,0.25)',
-    gap: 16,
-    ...cardShadow,
-  },
-  tabRow: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  tabChip: {
-    flex: 1,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
-    paddingVertical: 10,
-    alignItems: 'center',
-  },
-  tabChipActive: {
-    backgroundColor: palette.accent,
-    borderColor: 'rgba(255,255,255,0.4)',
-  },
-  tabText: {
-    color: palette.textSecondary,
-    fontWeight: '600',
-  },
-  tabTextActive: {
-    color: palette.background,
-  },
-  title: {
-    color: palette.textPrimary,
-    fontSize: 26,
-    fontWeight: '700',
-    fontFamily: Fonts.rounded,
-  },
-  subtitle: {
-    color: palette.textSecondary,
-    fontSize: 15,
-    lineHeight: 22,
-  },
-  form: {
-    gap: 14,
-  },
-  label: {
-    color: palette.textMuted,
-    fontSize: 13,
-    letterSpacing: 0.6,
-  },
-  input: {
-    backgroundColor: 'rgba(6,11,22,0.9)',
-    borderRadius: 16,
-    paddingHorizontal: 18,
-    paddingVertical: 14,
-    color: palette.textPrimary,
-    borderWidth: 1,
-    borderColor: 'rgba(124,131,255,0.35)',
-  },
-  passwordWrapper: {
-    position: 'relative',
-  },
-  passwordInput: {
-    paddingRight: 48,
-  },
-  eyeButton: {
-    position: 'absolute',
-    right: 14,
-    top: 0,
-    bottom: 0,
-    justifyContent: 'center',
-  },
-  helper: {
-    color: palette.textMuted,
-    fontSize: 12,
-    lineHeight: 18,
-    textAlign: 'center',
-  },
-  tipsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    justifyContent: 'center',
-  },
-  tipChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 999,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-  },
-  tipText: {
-    color: palette.textSecondary,
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  highlightSection: {
-    gap: 16,
-  },
-  highlightHeading: {
-    color: palette.textPrimary,
-    fontSize: 16,
-    fontWeight: '700',
-    letterSpacing: 0.4,
-  },
-  highlightTabs: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  highlightChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
-  },
-  highlightChipActive: {
-    backgroundColor: palette.textPrimary,
-    borderColor: palette.textPrimary,
-  },
-  highlightChipText: {
-    color: palette.textSecondary,
-    fontWeight: '600',
-  },
-  highlightChipTextActive: {
-    color: palette.background,
-  },
-  highlightCard: {
-    backgroundColor: 'rgba(16,28,51,0.95)',
-    borderRadius: 24,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(124,131,255,0.25)',
-    gap: 10,
-  },
-  highlightIconWrap: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  highlightTitle: {
-    color: palette.textPrimary,
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  highlightDescription: {
-    color: palette.textSecondary,
-    fontSize: 14,
-    lineHeight: 20,
-  },
-});
+const createStyles = (theme: LoginThemeConfig) => {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+    },
+    safeArea: {
+      flex: 1,
+    },
+    wrapper: {
+      flex: 1,
+    },
+    scrollContent: {
+      padding: 24,
+      paddingBottom: 48,
+      gap: 24,
+    },
+    themeToggleWrapper: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    themeToggleLabel: {
+      color: theme.palette.textSecondary,
+      fontSize: 14,
+      fontWeight: '600',
+    },
+    themeToggleCaption: {
+      color: theme.palette.textMuted,
+      fontSize: 12,
+      marginTop: 2,
+    },
+    themeToggleSwitch: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      borderRadius: 999,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderWidth: 1,
+      borderColor: theme.themeToggleBorder,
+    },
+    brandSection: {
+      gap: 16,
+    },
+    brandBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 14,
+    },
+    brandEmoji: {
+      fontSize: 40,
+    },
+    brandName: {
+      color: theme.palette.textPrimary,
+      fontSize: 26,
+      fontFamily: Fonts.rounded,
+      fontWeight: '700',
+      letterSpacing: 0.5,
+    },
+    brandTagline: {
+      color: theme.palette.textSecondary,
+      fontSize: 14,
+    },
+    statsRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 12,
+    },
+    statCard: {
+      flexGrow: 1,
+      minWidth: 110,
+      backgroundColor: theme.statCardBackground,
+      borderRadius: 16,
+      padding: 14,
+      borderWidth: 1,
+      borderColor: theme.statCardBorder,
+    },
+    statValue: {
+      color: theme.palette.textPrimary,
+      fontSize: 18,
+      fontWeight: '700',
+    },
+    statLabel: {
+      color: theme.palette.textSecondary,
+      fontSize: 12,
+      marginTop: 4,
+    },
+    card: {
+      backgroundColor: theme.cardBackground,
+      borderRadius: 28,
+      padding: 24,
+      borderWidth: 1,
+      borderColor: theme.cardBorder,
+      gap: 16,
+      ...cardShadow,
+    },
+    tabRow: {
+      flexDirection: 'row',
+      gap: 10,
+    },
+    tabChip: {
+      flex: 1,
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: theme.tabChipBorder,
+      paddingVertical: 10,
+      alignItems: 'center',
+    },
+    tabChipActive: {
+      backgroundColor: theme.palette.accent,
+      borderColor: theme.tabChipActiveBorder,
+    },
+    tabText: {
+      color: theme.palette.textSecondary,
+      fontWeight: '600',
+    },
+    tabTextActive: {
+      color: theme.palette.onAccent,
+    },
+    title: {
+      color: theme.palette.textPrimary,
+      fontSize: 26,
+      fontWeight: '700',
+      fontFamily: Fonts.rounded,
+    },
+    subtitle: {
+      color: theme.palette.textSecondary,
+      fontSize: 15,
+      lineHeight: 22,
+    },
+    form: {
+      gap: 14,
+    },
+    label: {
+      color: theme.palette.textMuted,
+      fontSize: 13,
+      letterSpacing: 0.6,
+    },
+    input: {
+      backgroundColor: theme.inputBackground,
+      borderRadius: 16,
+      paddingHorizontal: 18,
+      paddingVertical: 14,
+      color: theme.palette.textPrimary,
+      borderWidth: 1,
+      borderColor: theme.inputBorder,
+    },
+    passwordWrapper: {
+      position: 'relative',
+    },
+    passwordInput: {
+      paddingRight: 48,
+    },
+    eyeButton: {
+      position: 'absolute',
+      right: 14,
+      top: 0,
+      bottom: 0,
+      justifyContent: 'center',
+    },
+    helper: {
+      color: theme.palette.textMuted,
+      fontSize: 12,
+      lineHeight: 18,
+      textAlign: 'center',
+    },
+    tipsRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 8,
+      justifyContent: 'center',
+    },
+    tipChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 999,
+      backgroundColor: theme.tipChipBackground,
+    },
+    tipText: {
+      color: theme.palette.textSecondary,
+      fontSize: 12,
+      fontWeight: '600',
+    },
+    highlightSection: {
+      gap: 16,
+    },
+    highlightHeading: {
+      color: theme.palette.textPrimary,
+      fontSize: 16,
+      fontWeight: '700',
+      letterSpacing: 0.4,
+    },
+    highlightTabs: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 8,
+    },
+    highlightChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      paddingVertical: 8,
+      paddingHorizontal: 12,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: theme.highlightChipBorder,
+      backgroundColor: theme.highlightChipBackground,
+    },
+    highlightChipActive: {
+      backgroundColor: theme.palette.accent,
+      borderColor: theme.palette.accent,
+    },
+    highlightChipText: {
+      color: theme.palette.textSecondary,
+      fontWeight: '600',
+    },
+    highlightChipTextActive: {
+      color: theme.palette.onAccent,
+    },
+    highlightCard: {
+      backgroundColor: theme.highlightCardBackground,
+      borderRadius: 24,
+      padding: 20,
+      borderWidth: 1,
+      borderColor: theme.highlightCardBorder,
+      gap: 10,
+    },
+    highlightIconWrap: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    highlightTitle: {
+      color: theme.palette.textPrimary,
+      fontSize: 18,
+      fontWeight: '700',
+    },
+    highlightDescription: {
+      color: theme.palette.textSecondary,
+      fontSize: 14,
+      lineHeight: 20,
+    },
+  });
+};

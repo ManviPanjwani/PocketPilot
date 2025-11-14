@@ -4,11 +4,13 @@ import { Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { LinearGradient } from '@/utils/LinearGradient';
 
 import { useAssistant } from '@/assistant/AssistantContext';
-import { palette, cardShadow } from '@/styles/palette';
+import { cardShadow } from '@/styles/palette';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { useAppTheme } from '@/styles/ThemeProvider';
 
 export function AssistantFab() {
   const { openAssistant, enabled, isOpen } = useAssistant();
+  const { palette } = useAppTheme();
 
   if (isOpen) {
     return null;
@@ -23,11 +25,7 @@ export function AssistantFab() {
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.fab}>
-            <IconSymbol
-              name="sparkles"
-              color={enabled ? palette.background : 'rgba(12,18,30,0.85)'}
-              size={22}
-            />
+            <IconSymbol name="sparkles" color={enabled ? palette.onAccent : 'rgba(12,18,30,0.85)'} size={22} />
           </LinearGradient>
         </TouchableOpacity>
       </View>

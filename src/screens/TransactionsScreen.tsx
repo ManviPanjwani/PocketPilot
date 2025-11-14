@@ -22,8 +22,9 @@ import {
 import { AppButton } from '@/components/ui/AppButton';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { LinearGradient } from '@/utils/LinearGradient';
-import { palette, cardShadow } from '@/styles/palette';
+import { cardShadow, Palette } from '@/styles/palette';
 import { Fonts } from '@/constants/theme';
+import { useAppTheme } from '@/styles/ThemeProvider';
 
 const formatAmount = (value: number) => (Number.isFinite(value) ? value.toFixed(2) : '0.00');
 
@@ -53,6 +54,8 @@ const RANGE_OPTIONS = [
 type RangeFilter = (typeof RANGE_OPTIONS)[number]['id'];
 
 export default function TransactionsScreen() {
+  const { palette, mode } = useAppTheme();
+  const styles = useMemo(() => createStyles(palette), [palette]);
   const [items, setItems] = useState<Expense[]>([]);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [totalDraft, setTotalDraft] = useState('');
@@ -294,8 +297,10 @@ export default function TransactionsScreen() {
     ]);
   }
 
+  const backgroundGradient = mode === 'light' ? ['#eef3ff', '#dae3ff'] : ['#030b18', '#101c2f'];
+
   return (
-    <LinearGradient colors={['#030b18', '#101c2f']} style={styles.background}>
+    <LinearGradient colors={backgroundGradient} style={styles.background}>
       <View style={styles.container}>
         <FlatList
           data={filteredItems}
@@ -504,16 +509,17 @@ export default function TransactionsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (palette: Palette) =>
+  StyleSheet.create({
   background: { flex: 1 },
   container: { flex: 1, padding: 24 },
   header: { gap: 12 },
   summaryCard: {
-    backgroundColor: 'rgba(16,28,51,0.94)',
+    backgroundColor: palette.surface,
     borderRadius: 24,
     padding: 20,
     borderWidth: 1,
-    borderColor: 'rgba(124,131,255,0.25)',
+    borderColor: palette.border,
     flexDirection: 'row',
     alignItems: 'center',
     ...cardShadow,
@@ -545,7 +551,7 @@ const styles = StyleSheet.create({
   summaryDivider: {
     width: 1,
     height: '70%',
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: palette.border,
     marginHorizontal: 16,
   },
   filterRow: {
@@ -557,19 +563,19 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
+    borderColor: palette.border,
     alignItems: 'center',
   },
   filterChipActive: {
     backgroundColor: palette.accent,
-    borderColor: 'rgba(255,255,255,0.4)',
+    borderColor: palette.accent,
   },
   filterText: {
     color: palette.textSecondary,
     fontWeight: '600',
   },
   filterTextActive: {
-    color: palette.background,
+    color: palette.onAccent,
   },
   title: {
     color: palette.textPrimary,
@@ -611,7 +617,7 @@ const styles = StyleSheet.create({
     gap: 8,
     padding: 10,
     borderRadius: 14,
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: palette.surfaceElevated,
   },
   note: { color: palette.textSecondary, flex: 1 },
   empty: { color: palette.textSecondary, marginTop: 32, textAlign: 'center' },
@@ -630,11 +636,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
+    borderColor: palette.border,
+    backgroundColor: palette.surface,
   },
   deletePill: {
-    borderColor: 'rgba(248,113,113,0.4)',
-    backgroundColor: 'rgba(248,113,113,0.1)',
+    borderColor: palette.danger,
+    backgroundColor: palette.surface,
   },
   deleteButton: {
     color: palette.danger,
@@ -733,7 +740,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   differenceWarning: {
-    backgroundColor: 'rgba(248, 113, 113, 0.16)',
+    backgroundColor: palette.surface,
     borderColor: palette.danger,
   },
   differenceResolved: {
@@ -752,7 +759,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   modalPrimaryAction: {},
-});
+  });
 
 function formatTimestamp(item: Expense, formatter: Intl.DateTimeFormat) {
   if (item.createdAt && typeof item.createdAt.toDate === 'function') {
