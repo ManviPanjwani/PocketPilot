@@ -138,6 +138,55 @@ export default function HomeScreen() {
   // Whether Victory is available
   const pieAvailable = Boolean(VictoryPie);
 
+  const statPillGradients = useMemo(
+    () =>
+      mode === 'light'
+        ? [
+            ['#7c83ff', '#a855f7'],
+            ['#0ea5e9', '#22d3ee'],
+            ['#f97316', '#fb7185'],
+          ]
+        : [
+            ['#4c51bf', '#6d28d9'],
+            ['#0f766e', '#0d9488'],
+            ['#b45309', '#be123c'],
+          ],
+    [mode],
+  );
+
+  const statPillConfigs = useMemo(
+    () => [
+      {
+        key: 'spent',
+        label: 'Spent',
+        value: currencyFormatter.format(summary.totalSpent),
+        hint: 'So far this month',
+        colors: statPillGradients[0],
+      },
+      {
+        key: 'remaining',
+        label: 'Remaining',
+        value: currencyFormatter.format(summary.remainingBudget),
+        hint: summary.monthlyIncome > 0 ? 'Left in your budget' : 'Set a monthly income',
+        colors: statPillGradients[1],
+      },
+      {
+        key: 'transactions',
+        label: 'Transactions',
+        value: summary.transactions.toString(),
+        hint: 'Logged this month',
+        colors: statPillGradients[2],
+      },
+    ],
+    [
+      summary.totalSpent,
+      summary.remainingBudget,
+      summary.monthlyIncome,
+      summary.transactions,
+      statPillGradients,
+    ],
+  );
+
   async function saveIncome() {
     if (savingIncome) return;
 
@@ -196,6 +245,21 @@ export default function HomeScreen() {
             <Text style={styles.logoutText}>Logout</Text>
           </TouchableOpacity>
         </View>
+      </View>
+
+      <View style={styles.statPills}>
+        {statPillConfigs.map((pill) => (
+          <LinearGradient
+            key={pill.key}
+            colors={pill.colors}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.statPill}>
+            <Text style={styles.statLabel}>{pill.label}</Text>
+            <Text style={styles.statValue}>{pill.value}</Text>
+            <Text style={styles.statHint}>{pill.hint}</Text>
+          </LinearGradient>
+        ))}
       </View>
 
       <LinearGradient
@@ -310,32 +374,44 @@ export default function HomeScreen() {
               <Text style={styles.caption}>No category data with positive totals yet.</Text>
             ) : (
               <View style={styles.chartContainer}>
-                <VictoryPie
-                  data={pieData}
-                  colorScale={resolvedPieColors}
-                  width={260}
-                  height={260}
-                  animate={{ duration: 500 }}
-                  innerRadius={60}
-                  padAngle={2}
-                  cornerRadius={12}
-                  labels={({ datum }) => `${datum.x}\n${currencyFormatter.format(datum.y)}`}
-                  labelRadius={({ radius }) => radius + 20}
-                  style={{
-                    data: {
-                      // Force colors by index to ensure visible fills
-                      fill: ({ index }) => resolvedPieColors[index % resolvedPieColors.length],
-                      fillOpacity: 1,
-                      strokeWidth: 0,
-                    },
-                    labels: {
-                      fill: palette.textPrimary,
-                      fontSize: 12,
-                      fontWeight: '600',
-                      textAlign: 'center',
-                    },
-                  }}
-                />
+                <View style={styles.chartWrapper}>
+                  <VictoryPie
+                    data={pieData}
+                    colorScale={resolvedPieColors}
+                    width={260}
+                    height={260}
+                    animate={{ duration: 500 }}
+                    innerRadius={70}
+                    padAngle={2}
+                    cornerRadius={12}
+                    labels={({ datum }) => `${datum.x}\n${currencyFormatter.format(datum.y)}`}
+                    labelRadius={({ radius }) => radius + 20}
+                    style={{
+                      data: {
+                        // Force colors by index to ensure visible fills
+                        fill: ({ index }) => resolvedPieColors[index % resolvedPieColors.length],
+                        fillOpacity: 1,
+                        strokeWidth: 0,
+                      },
+                      labels: {
+                        fill: palette.textPrimary,
+                        fontSize: 12,
+                        fontWeight: '600',
+                        textAlign: 'center',
+                      },
+                    }}
+                  />
+                  <View style={styles.chartCenter}>
+                    <Text style={styles.chartCenterValue}>
+                      {currencyFormatter.format(summary.totalSpent)}
+                    </Text>
+                    <Text style={styles.chartCenterLabel}>
+                      {summary.monthlyIncome > 0
+                        ? `of ${currencyFormatter.format(summary.monthlyIncome)} budget`
+                        : 'tracked this month'}
+                    </Text>
+                  </View>
+                </View>
               </View>
             )}
 
@@ -407,6 +483,35 @@ const createStyles = (palette: Palette) =>
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+  },
+  statPills: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  statPill: {
+    flex: 1,
+    minWidth: 150,
+    borderRadius: 24,
+    padding: 18,
+    ...cardShadow,
+  },
+  statLabel: {
+    color: '#ffffff',
+    fontSize: 12,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+    opacity: 0.85,
+  },
+  statValue: {
+    color: '#ffffff',
+    fontSize: 24,
+    fontWeight: '700',
+  },
+  statHint: {
+    color: 'rgba(255, 255, 255, 0.9)',
+    fontSize: 12,
+    marginTop: 2,
   },
   headerActions: {
     flexDirection: 'row',
@@ -589,6 +694,27 @@ const createStyles = (palette: Palette) =>
     borderRadius: 20,
     borderWidth: 1,
     borderColor: palette.border,
+  },
+  chartWrapper: {
+    width: 260,
+    height: 260,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  chartCenter: {
+    position: 'absolute',
+    alignItems: 'center',
+  },
+  chartCenterValue: {
+    color: palette.textPrimary,
+    fontSize: 20,
+    fontWeight: '700',
+  },
+  chartCenterLabel: {
+    color: palette.textSecondary,
+    fontSize: 12,
+    textAlign: 'center',
+    marginTop: 2,
   },
   categoryList: {
     gap: 14,
