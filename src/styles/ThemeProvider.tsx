@@ -26,7 +26,7 @@ const THEME_KEY = 'pocketpilot:theme';
 const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
 
 export function ThemeProvider({ children }: PropsWithChildren) {
-  const [mode, setModeState] = useState<ThemeMode>('dark');
+  const [mode, setModeState] = useState<ThemeMode>('light');
   const [isReady, setReady] = useState(false);
 
   useEffect(() => {

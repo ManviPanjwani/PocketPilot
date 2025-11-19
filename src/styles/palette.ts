@@ -20,7 +20,7 @@ export const darkPalette = {
 export type Palette = typeof darkPalette;
 
 export const lightPalette: Palette = {
-  background: '#f7f9ff',
+  background: '#ffffff',
   backgroundAlt: '#ffffff',
   surface: '#eff3ff',
   surfaceElevated: '#ffffff',
@@ -39,7 +39,7 @@ export const lightPalette: Palette = {
 };
 
 // Temporary backwards-compat export for files not yet migrated to ThemeProvider.
-export const palette = darkPalette;
+export const palette = lightPalette;
 
 export const cardShadow = {
   shadowColor: '#000',

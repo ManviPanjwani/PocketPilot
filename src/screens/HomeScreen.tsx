@@ -329,7 +329,7 @@ export default function HomeScreen() {
                       strokeWidth: 0,
                     },
                     labels: {
-                      fill: '#e8f0fe',
+                      fill: palette.textPrimary,
                       fontSize: 12,
                       fontWeight: '600',
                       textAlign: 'center',
