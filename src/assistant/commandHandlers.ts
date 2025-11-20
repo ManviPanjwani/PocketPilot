@@ -3,7 +3,8 @@ import { addGoal } from '@/services/goals';
 import { upsertUserProfile } from '@/services/profile';
 
 import { FlowId } from './flows';
-import { currencyFormatter, normalizeCategoryInput, parseAmount } from './utils';
+import { currencyFormatter, getAssistantCurrency, normalizeCategoryInput, parseAmount } from './utils';
+import { SUPPORTED_CURRENCIES } from '@/constants/currencies';
 
 export type CommandResult = {
   message: string;
@@ -21,6 +22,32 @@ export async function processAssistantCommand(input: string): Promise<CommandRes
 
   const lower = normalized.toLowerCase();
 
+  if (
+    lower.startsWith('set currency') ||
+    lower.startsWith('update currency') ||
+    lower === 'currency' ||
+    lower.startsWith('currency ')
+  ) {
+    const tokens = normalized.trim().split(/\s+/);
+    const lastToken = tokens[tokens.length - 1] ?? '';
+    const candidate = lastToken.replace(/[^A-Za-z]/g, '').toUpperCase();
+    const selected = SUPPORTED_CURRENCIES.find((option) => option === candidate);
+
+    if (!selected) {
+      const current = getAssistantCurrency();
+      return {
+        message: `I'm showing amounts in ${current}. Tell me which currency to use (${SUPPORTED_CURRENCIES.join(
+          ', ',
+        )}), e.g. “set currency EUR”.`,
+      };
+    }
+
+    await upsertUserProfile({ currency: selected });
+    return {
+      message: `Great, I’ll display amounts in ${selected} from now on.`,
+    };
+  }
+
   // Handle setting monthly income
   if (lower.startsWith('set income') || lower.startsWith('update income')) {
     const amountMatch = normalized.match(/(-?\d+[\d.,]*)/);
@@ -32,7 +59,7 @@ export async function processAssistantCommand(input: string): Promise<CommandRes
       };
     }
 
-    await upsertUserProfile({ monthlyIncome: amount, currency: 'USD' });
+    await upsertUserProfile({ monthlyIncome: amount });
     return {
       message: `Got it! I set your monthly income to ${currencyFormatter.format(amount)}.`,
     };

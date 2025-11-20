@@ -1,8 +1,28 @@
-export const currencyFormatter = new Intl.NumberFormat(undefined, {
-  style: 'currency',
-  currency: 'USD',
-  maximumFractionDigits: 2,
-});
+import { normalizeCurrencyCode, SupportedCurrency } from '@/constants/currencies';
+
+function createCurrencyFormatter(currency: SupportedCurrency) {
+  return new Intl.NumberFormat(undefined, {
+    style: 'currency',
+    currency,
+    maximumFractionDigits: 2,
+  });
+}
+
+let currentCurrency: SupportedCurrency = 'USD';
+export let currencyFormatter = createCurrencyFormatter(currentCurrency);
+
+export function setAssistantCurrency(next: string | null | undefined) {
+  const normalized = normalizeCurrencyCode(next);
+  if (normalized === currentCurrency) {
+    return;
+  }
+  currentCurrency = normalized;
+  currencyFormatter = createCurrencyFormatter(currentCurrency);
+}
+
+export function getAssistantCurrency() {
+  return currentCurrency;
+}
 
 const CATEGORY_LABELS = [
   'Groceries',

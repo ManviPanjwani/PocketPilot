@@ -5,11 +5,13 @@ import React, {
   useMemo,
   useState,
   ReactNode,
+  useEffect,
 } from 'react';
 
 import { processAssistantCommand } from './commandHandlers';
 import { FlowId, FlowState, getFlowSuggestions, handleFlowInput, initFlow } from './flows';
-import { isExitIntent } from './utils';
+import { isExitIntent, setAssistantCurrency } from './utils';
+import { observeUserProfile } from '@/services/profile';
 
 export type AssistantMessage = {
   id: string;
@@ -63,6 +65,17 @@ export function AssistantProvider({ children, enabled = true }: Props) {
     ],
     [],
   );
+
+  useEffect(() => {
+    if (!enabled) {
+      setAssistantCurrency('USD');
+      return;
+    }
+    const unsubscribe = observeUserProfile((profile) => {
+      setAssistantCurrency(profile?.currency);
+    });
+    return unsubscribe;
+  }, [enabled]);
 
   const appendAssistantMessages = useCallback((texts: string[]) => {
     const cleaned = texts.filter((text) => text && text.trim().length);

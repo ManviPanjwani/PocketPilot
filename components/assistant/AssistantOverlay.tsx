@@ -19,7 +19,7 @@ import { AppButton } from '@/components/ui/AppButton';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 import { Palette } from '@/styles/palette';
-import { useAppTheme } from '@/styles/ThemeProvider';
+import { ThemeMode, useAppTheme } from '@/styles/ThemeProvider';
 
 export function AssistantOverlay() {
   const {
@@ -92,8 +92,12 @@ export function AssistantOverlay() {
     { id: 'deleteExpense', label: 'Delete expense' },
   ];
 
-  const { palette } = useAppTheme();
-  const styles = useMemo(() => createStyles(palette), [palette]);
+  const { palette, mode } = useAppTheme();
+  const styles = useMemo(() => createStyles(palette, mode), [palette, mode]);
+  const sheetGradient = useMemo(
+    () => (mode === 'light' ? ['#fdfcff', '#e8efff'] : ['#16233c', '#0f192d']),
+    [mode],
+  );
 
   return (
     <Modal visible={isOpen} animationType="fade" transparent onRequestClose={closeAssistant}>
@@ -102,7 +106,7 @@ export function AssistantOverlay() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <TouchableOpacity style={styles.scrim} activeOpacity={1} onPress={closeAssistant} />
         <LinearGradient
-          colors={['#16233c', '#0f192d']}
+          colors={sheetGradient}
           start={{ x: 0, y: 0 }}
           end={{ x: 0.9, y: 1 }}
           style={styles.sheet}>
@@ -251,13 +255,13 @@ export function AssistantOverlay() {
   );
 }
 
-const createStyles = (palette: Palette) =>
+const createStyles = (palette: Palette, mode: ThemeMode) =>
   StyleSheet.create({
   backdrop: {
     flex: 1,
     justifyContent: 'flex-end',
     alignItems: 'center',
-    backgroundColor: 'rgba(4, 11, 24, 0.72)',
+    backgroundColor: mode === 'light' ? 'rgba(15, 23, 42, 0.25)' : 'rgba(4, 11, 24, 0.72)',
   },
   scrim: {
     ...StyleSheet.absoluteFillObject,
@@ -271,7 +275,7 @@ const createStyles = (palette: Palette) =>
     paddingTop: 20,
     paddingBottom: 30,
     borderTopWidth: 1,
-    borderColor: palette.border,
+    borderColor: mode === 'light' ? 'rgba(15, 23, 42, 0.08)' : palette.border,
     overflow: 'hidden',
   },
   sheetHeader: {
@@ -299,12 +303,12 @@ const createStyles = (palette: Palette) =>
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 999,
-    backgroundColor: palette.accentMuted,
+    backgroundColor: mode === 'light' ? palette.surface : palette.accentMuted,
     borderWidth: 1,
-    borderColor: palette.border,
+    borderColor: mode === 'light' ? 'rgba(15, 23, 42, 0.08)' : palette.border,
   },
   quickChipText: {
-    color: palette.accentBright,
+    color: mode === 'light' ? palette.textPrimary : palette.accentBright,
     fontWeight: '600',
   },
   suggestionsWrapper: {
@@ -319,12 +323,12 @@ const createStyles = (palette: Palette) =>
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 999,
-    backgroundColor: palette.surfaceElevated,
+    backgroundColor: mode === 'light' ? palette.surface : palette.surfaceElevated,
     borderWidth: 1,
-    borderColor: palette.border,
+    borderColor: mode === 'light' ? 'rgba(15, 23, 42, 0.08)' : palette.border,
   },
   suggestionText: {
-    color: palette.textSecondary,
+    color: mode === 'light' ? palette.textPrimary : palette.textSecondary,
     fontWeight: '600',
   },
   controlsRow: {
@@ -343,9 +347,9 @@ const createStyles = (palette: Palette) =>
     borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(124, 131, 255, 0.25)',
+    backgroundColor: mode === 'light' ? 'rgba(124, 131, 255, 0.12)' : 'rgba(124, 131, 255, 0.25)',
     borderWidth: 1,
-    borderColor: 'rgba(124, 131, 255, 0.45)',
+    borderColor: mode === 'light' ? 'rgba(124, 131, 255, 0.35)' : 'rgba(124, 131, 255, 0.45)',
   },
   micButtonActive: {
     backgroundColor: palette.accent,
@@ -411,12 +415,14 @@ const createStyles = (palette: Palette) =>
     gap: 6,
   },
   messageBubbleAssistant: {
-    backgroundColor: 'rgba(16, 28, 51, 0.95)',
+    backgroundColor: mode === 'light' ? palette.surface : 'rgba(16, 28, 51, 0.95)',
     borderWidth: 1,
-    borderColor: 'rgba(124, 131, 255, 0.18)',
+    borderColor: mode === 'light' ? 'rgba(15, 23, 42, 0.08)' : 'rgba(124, 131, 255, 0.18)',
   },
   messageBubbleUser: {
     backgroundColor: palette.accent,
+    borderWidth: 1,
+    borderColor: mode === 'light' ? 'rgba(255, 255, 255, 0.6)' : 'rgba(255, 255, 255, 0.35)',
   },
   messageAuthor: {
     fontSize: 11,
@@ -424,7 +430,7 @@ const createStyles = (palette: Palette) =>
     letterSpacing: 0.8,
   },
   messageAuthorAssistant: {
-    color: palette.textMuted,
+    color: mode === 'light' ? palette.textSecondary : palette.textMuted,
   },
   messageAuthorUser: {
     color: palette.onAccent,
@@ -445,13 +451,13 @@ const createStyles = (palette: Palette) =>
   },
   input: {
     flex: 1,
-    backgroundColor: palette.surfaceElevated,
+    backgroundColor: mode === 'light' ? palette.surface : palette.surfaceElevated,
     borderRadius: 14,
     paddingHorizontal: 14,
     paddingVertical: Platform.select({ ios: 16, default: 12 }),
     color: palette.textPrimary,
     borderWidth: 1,
-    borderColor: palette.border,
+    borderColor: mode === 'light' ? 'rgba(15, 23, 42, 0.08)' : palette.border,
   },
   sendButton: {
     minHeight: 48,

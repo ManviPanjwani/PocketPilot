@@ -496,7 +496,7 @@ async function handleIncomeFlow(state: IncomeState, input: string): Promise<Flow
     };
   }
 
-  await upsertUserProfile({ monthlyIncome: amount, currency: 'USD' });
+  await upsertUserProfile({ monthlyIncome: amount });
   return {
     messages: [
       `Done! Monthly income updated to ${currencyFormatter.format(amount)}.`,

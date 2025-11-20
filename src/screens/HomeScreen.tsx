@@ -1,5 +1,15 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Switch } from 'react-native';
+import {
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+  Switch,
+} from 'react-native';
 import { LinearGradient } from '@/utils/LinearGradient';
 
 import { firebaseAuth } from '../firebase';
@@ -12,6 +22,7 @@ import { cardShadow, Palette } from '@/styles/palette';
 import { Fonts } from '@/constants/theme';
 import { useAppTheme } from '@/styles/ThemeProvider';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { SUPPORTED_CURRENCIES } from '@/constants/currencies';
 
 let VictoryPie: any;
 
@@ -21,12 +32,6 @@ try {
 } catch (error) {
   console.warn('Victory charts unavailable, showing summaries only.', error);
 }
-
-const currencyFormatter = new Intl.NumberFormat(undefined, {
-  style: 'currency',
-  currency: 'USD',
-  maximumFractionDigits: 2,
-});
 
 const percentFormatter = new Intl.NumberFormat(undefined, {
   style: 'percent',
@@ -52,12 +57,23 @@ export default function HomeScreen() {
   const [editingIncome, setEditingIncome] = useState(false);
   const [incomeDraft, setIncomeDraft] = useState('');
   const [savingIncome, setSavingIncome] = useState(false);
+  const [showCurrencyPicker, setShowCurrencyPicker] = useState(false);
+  const [updatingCurrency, setUpdatingCurrency] = useState(false);
   const currency = profile?.currency ?? 'USD';
+  const currencyFormatter = useMemo(
+    () =>
+      new Intl.NumberFormat(undefined, {
+        style: 'currency',
+        currency,
+        maximumFractionDigits: 2,
+      }),
+    [currency],
+  );
 
   const formattedIncome = useMemo(() => {
     if (!profile?.monthlyIncome) return currencyFormatter.format(0);
     return currencyFormatter.format(profile.monthlyIncome);
-  }, [profile?.monthlyIncome]);
+  }, [profile?.monthlyIncome, currencyFormatter]);
 
   useEffect(() => {
     const unsub = listenAuth((user) => setEmail(user?.email ?? null));
@@ -184,6 +200,7 @@ export default function HomeScreen() {
       summary.monthlyIncome,
       summary.transactions,
       statPillGradients,
+      currencyFormatter,
     ],
   );
 
@@ -205,6 +222,22 @@ export default function HomeScreen() {
       Alert.alert('Monthly income', error?.message ?? 'Unable to update income.');
     } finally {
       setSavingIncome(false);
+    }
+  }
+
+  async function handleCurrencySelect(nextCurrency: string) {
+    if (nextCurrency === currency) {
+      setShowCurrencyPicker(false);
+      return;
+    }
+    try {
+      setUpdatingCurrency(true);
+      await upsertUserProfile({ currency: nextCurrency });
+      setShowCurrencyPicker(false);
+    } catch (error: any) {
+      Alert.alert('Currency', error?.message ?? 'Unable to update currency.');
+    } finally {
+      setUpdatingCurrency(false);
     }
   }
 
@@ -317,6 +350,42 @@ export default function HomeScreen() {
           <Text style={styles.highlightValue}>{formattedIncome}</Text>
         )}
         <Text style={styles.caption}>Used to calculate your monthly budget.</Text>
+
+        <View style={styles.currencySection}>
+          <Text style={styles.currencyLabel}>Display currency</Text>
+          <Pressable
+            style={styles.currencyDropdown}
+            onPress={() => setShowCurrencyPicker((current) => !current)}
+            disabled={updatingCurrency}>
+            <Text style={styles.currencyValue}>{currency}</Text>
+            <Text style={styles.currencyCaret}>{showCurrencyPicker ? '▲' : '▼'}</Text>
+          </Pressable>
+          {showCurrencyPicker ? (
+            <View style={styles.currencyDropdownList}>
+              {SUPPORTED_CURRENCIES.map((option) => {
+                const selected = option === currency;
+                return (
+                  <Pressable
+                    key={option}
+                    style={[styles.currencyOption, selected && styles.currencyOptionSelected]}
+                    disabled={updatingCurrency}
+                    onPress={() => handleCurrencySelect(option)}>
+                    <Text
+                      style={[
+                        styles.currencyOptionText,
+                        selected && styles.currencyOptionTextSelected,
+                      ]}>
+                      {option}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          ) : null}
+          {updatingCurrency ? (
+            <Text style={styles.currencyStatus}>Saving currency...</Text>
+          ) : null}
+        </View>
       </View>
 
       <View style={styles.card}>
@@ -453,7 +522,9 @@ export default function HomeScreen() {
                 />
                 <View>
                   <Text style={styles.activityTitle}>{entry.title}</Text>
-                  <Text style={styles.activitySubtitle}>{describeActivity(entry)}</Text>
+                  <Text style={styles.activitySubtitle}>
+                    {describeActivity(entry, currencyFormatter)}
+                  </Text>
                 </View>
               </View>
               <Text style={styles.activityAmount}>
@@ -644,6 +715,63 @@ const createStyles = (palette: Palette) =>
     borderWidth: 1,
     borderColor: palette.border,
   },
+  currencySection: {
+    marginTop: 4,
+    gap: 8,
+  },
+  currencyLabel: {
+    color: palette.textMuted,
+    fontSize: 13,
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
+  },
+  currencyDropdown: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderColor: palette.border,
+    backgroundColor: palette.backgroundAlt,
+    borderRadius: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  currencyValue: {
+    color: palette.textPrimary,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  currencyCaret: {
+    color: palette.textSecondary,
+    fontSize: 14,
+  },
+  currencyDropdownList: {
+    borderWidth: 1,
+    borderColor: palette.border,
+    backgroundColor: palette.backgroundAlt,
+    borderRadius: 16,
+    marginTop: 6,
+    overflow: 'hidden',
+  },
+  currencyOption: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+  },
+  currencyOptionSelected: {
+    backgroundColor: palette.surfaceElevated,
+  },
+  currencyOptionText: {
+    color: palette.textPrimary,
+    fontSize: 15,
+  },
+  currencyOptionTextSelected: {
+    fontWeight: '700',
+  },
+  currencyStatus: {
+    color: palette.textSecondary,
+    fontSize: 12,
+    marginTop: 4,
+  },
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -795,8 +923,8 @@ const createStyles = (palette: Palette) =>
   },
   });
 
-function describeActivity(entry: ActivityEntry) {
-  const formatter = new Intl.DateTimeFormat(undefined, {
+function describeActivity(entry: ActivityEntry, currencyFormatter: Intl.NumberFormat) {
+  const dateFormatter = new Intl.DateTimeFormat(undefined, {
     dateStyle: 'medium',
     timeStyle: 'short',
   });
@@ -804,13 +932,13 @@ function describeActivity(entry: ActivityEntry) {
   let timestampLabel = 'recently';
   if (entry.createdAt && typeof entry.createdAt.toDate === 'function') {
     try {
-      timestampLabel = formatter.format(entry.createdAt.toDate());
+      timestampLabel = dateFormatter.format(entry.createdAt.toDate());
     } catch {
       // ignore
     }
   } else if (entry.createdAtISO) {
     try {
-      timestampLabel = formatter.format(new Date(entry.createdAtISO));
+      timestampLabel = dateFormatter.format(new Date(entry.createdAtISO));
     } catch {
       // ignore
     }
