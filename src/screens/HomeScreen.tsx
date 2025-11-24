@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   View,
   Switch,
+  Modal,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from '@/utils/LinearGradient';
@@ -61,6 +62,9 @@ export default function HomeScreen() {
   const [savingIncome, setSavingIncome] = useState(false);
   const [showCurrencyPicker, setShowCurrencyPicker] = useState(false);
   const [updatingCurrency, setUpdatingCurrency] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [usernameDraft, setUsernameDraft] = useState('');
+  const [savingProfile, setSavingProfile] = useState(false);
   const currency = profile?.currency ?? 'USD';
   const currencyFormatter = useMemo(
     () =>
@@ -85,6 +89,9 @@ export default function HomeScreen() {
   useEffect(() => {
     const unsubscribeProfile = observeUserProfile((newProfile) => {
       setProfile(newProfile);
+      if (newProfile?.username) {
+        setUsernameDraft(newProfile.username);
+      }
       if (newProfile?.monthlyIncome) {
         setIncomeDraft(String(newProfile.monthlyIncome));
       }
@@ -268,6 +275,20 @@ export default function HomeScreen() {
       : 'Log an expense to start charting this month.';
   const progressColor =
     spendRatio > 0.85 ? palette.danger : spendRatio > 0.65 ? palette.warning : palette.accent;
+  const displayName = profile?.username?.trim() || email || 'Guest';
+
+  async function saveProfile() {
+    if (savingProfile) return;
+    try {
+      setSavingProfile(true);
+      await upsertUserProfile({ username: usernameDraft.trim() || undefined });
+      setShowProfileModal(false);
+    } catch (error: any) {
+      Alert.alert('Profile', error?.message ?? 'Unable to update profile.');
+    } finally {
+      setSavingProfile(false);
+    }
+  }
 
   return (
     <SafeAreaView style={[styles.container, { paddingTop: insets.top || 12 }]}>
@@ -277,8 +298,11 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}>
       <View style={styles.header}>
         <View>
-          <Text style={styles.greeting}>Welcome back</Text>
-          <Text style={styles.email}>{email ?? 'Not signed in'}</Text>
+          <Text style={styles.greeting}>Welcome</Text>
+          <TouchableOpacity onPress={() => setShowProfileModal(true)}>
+            <Text style={styles.email}>{displayName}</Text>
+          </TouchableOpacity>
+          <Text style={styles.caption}>Signed in as {email ?? 'Not signed in'}</Text>
         </View>
         <View style={styles.headerActions}>
           <View>
@@ -295,6 +319,9 @@ export default function HomeScreen() {
               <IconSymbol name="sun.max.fill" size={14} color={palette.textSecondary} />
             </View>
           </View>
+          <TouchableOpacity onPress={() => setShowProfileModal(true)} style={styles.logoutButton}>
+            <Text style={styles.logoutText}>Profile</Text>
+          </TouchableOpacity>
           <TouchableOpacity onPress={signOutUser} style={styles.logoutButton}>
             <Text style={styles.logoutText}>Logout</Text>
           </TouchableOpacity>
@@ -659,6 +686,53 @@ export default function HomeScreen() {
         )}
       </View>
       </ScrollView>
+      <Modal
+        visible={showProfileModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowProfileModal(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Profile</Text>
+            <TextInput
+              style={styles.modalInput}
+              placeholder="Display name"
+              value={usernameDraft}
+              onChangeText={setUsernameDraft}
+              autoCapitalize="words"
+            />
+            <AppButton
+              label={savingProfile ? 'Saving...' : 'Save display name'}
+              onPress={saveProfile}
+              disabled={savingProfile}
+            />
+            <AppButton
+              label="Change password"
+              variant="secondary"
+              onPress={() =>
+                Alert.alert(
+                  'Password',
+                  'Use the password reset or update flow in your authentication provider.',
+                )
+              }
+            />
+            <View style={styles.modalActions}>
+              <AppButton
+                label="Close"
+                variant="secondary"
+                onPress={() => setShowProfileModal(false)}
+                style={styles.modalActionButton}
+              />
+              <AppButton
+                label="Logout"
+                variant="danger"
+                onPress={signOutUser}
+                style={styles.modalActionButton}
+              />
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -1270,6 +1344,43 @@ const createStyles = (palette: Palette) =>
   activityAmount: {
     color: palette.textPrimary,
     fontWeight: '600',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  modalCard: {
+    width: '100%',
+    backgroundColor: palette.surface,
+    borderRadius: 20,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: palette.border,
+    gap: 14,
+    ...cardShadow,
+  },
+  modalTitle: {
+    color: palette.textPrimary,
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  modalInput: {
+    backgroundColor: palette.backgroundAlt,
+    borderRadius: 12,
+    padding: 14,
+    color: palette.textPrimary,
+    borderWidth: 1,
+    borderColor: palette.border,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  modalActionButton: {
+    flex: 1,
   },
   });
 

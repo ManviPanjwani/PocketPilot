@@ -5,6 +5,7 @@ export type UserProfile = {
   monthlyIncome?: number;
   currency?: string;
   updatedAt?: firebase.firestore.Timestamp;
+  username?: string;
 };
 
 export function observeUserProfile(handler: (profile: UserProfile | null) => void) {
