@@ -14,9 +14,11 @@ import { Goal, observeGoals, addGoal, deleteGoal } from '@/services/goals';
 import { observeMonthlySummary, MonthlySummary } from '@/services/expenses';
 import { observeUserProfile, UserProfile } from '@/services/profile';
 import { AppButton } from '@/components/ui/AppButton';
+import { IconSymbol } from '@/components/ui/icon-symbol';
 import { cardShadow, Palette } from '@/styles/palette';
 import { Fonts } from '@/constants/theme';
 import { useAppTheme } from '@/styles/ThemeProvider';
+import { LinearGradient } from '@/utils/LinearGradient';
 
 const currencyFormatter = new Intl.NumberFormat(undefined, {
   style: 'currency',
@@ -33,7 +35,7 @@ const normalizeCategoryLabel = (raw?: string | null, fallback?: string) => {
 };
 
 export default function GoalsScreen() {
-  const { palette } = useAppTheme();
+  const { palette, mode } = useAppTheme();
   const styles = useMemo(() => createStyles(palette), [palette]);
   const [goals, setGoals] = useState<Goal[]>([]);
   const [title, setTitle] = useState('');
@@ -101,6 +103,16 @@ export default function GoalsScreen() {
     () => filteredGoals.filter((goal) => computeSpent(goal, summary) >= goal.targetAmount),
     [filteredGoals, summary],
   );
+
+  const aggregate = useMemo(() => {
+    if (!goals.length) {
+      return { percent: 0, spent: 0, target: 0 };
+    }
+    const target = goals.reduce((sum, goal) => sum + goal.targetAmount, 0);
+    const spent = goals.reduce((sum, goal) => sum + computeSpent(goal, summary), 0);
+    const percent = target > 0 ? Math.min(spent / target, 1) : 0;
+    return { percent, spent, target };
+  }, [goals, summary]);
 
   const listData = useMemo(
     () => [
@@ -333,6 +345,8 @@ export default function GoalsScreen() {
     );
   }
 
+  const heroGradient = mode === 'light' ? ['#e8edff', '#d2dcff'] : ['#0f1c35', '#091328'];
+
   return (
     <FlatList
       data={listData}
@@ -340,6 +354,40 @@ export default function GoalsScreen() {
       renderItem={renderItem}
       contentContainerStyle={styles.listContent}
       style={styles.list}
+      ListHeaderComponent={
+        <LinearGradient colors={heroGradient} style={styles.heroCard}>
+          <View style={styles.heroHeader}>
+            <View>
+              <Text style={styles.heroEyebrow}>Goals cockpit</Text>
+              <Text style={styles.heroTitle}>Stay on track</Text>
+              <Text style={styles.heroSubtitle}>
+                {goals.length ? 'Monitor active goals and celebrate wins.' : 'Set a goal to start tracking spend.'}
+              </Text>
+            </View>
+            <View style={styles.heroBadge}>
+              <IconSymbol name="shield.checkerboard" size={16} color={palette.accent} />
+              <Text style={styles.heroBadgeText}>
+                {Math.round(aggregate.percent * 100)}% funded
+              </Text>
+            </View>
+          </View>
+          <View style={styles.heroStats}>
+            <View style={styles.heroStat}>
+              <Text style={styles.heroStatLabel}>Active</Text>
+              <Text style={styles.heroStatValue}>{upcomingGoals.length}</Text>
+            </View>
+            <View style={styles.heroStat}>
+              <Text style={styles.heroStatLabel}>Completed</Text>
+              <Text style={styles.heroStatValue}>{completedGoals.length}</Text>
+            </View>
+            <View style={styles.heroStat}>
+              <Text style={styles.heroStatLabel}>Spend this month</Text>
+              <Text style={styles.heroStatValue}>{currencyFormatter.format(summary.totalSpent)}</Text>
+            </View>
+          </View>
+        </LinearGradient>
+      }
+      ListHeaderComponentStyle={styles.listHeader}
     />
   );
 }
@@ -354,6 +402,83 @@ const createStyles = (palette: Palette) =>
     padding: 24,
     paddingBottom: 64,
     gap: 20,
+  },
+  listHeader: {
+    marginBottom: 12,
+  },
+  heroCard: {
+    borderRadius: 24,
+    padding: 20,
+    gap: 14,
+    borderWidth: 1,
+    borderColor: palette.border,
+    ...cardShadow,
+  },
+  heroHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  heroEyebrow: {
+    color: palette.textMuted,
+    fontSize: 12,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+  },
+  heroTitle: {
+    color: palette.textPrimary,
+    fontSize: 26,
+    fontWeight: '800',
+    fontFamily: Fonts.rounded,
+    letterSpacing: 0.4,
+  },
+  heroSubtitle: {
+    color: palette.textSecondary,
+    fontSize: 14,
+    lineHeight: 20,
+    marginTop: 2,
+  },
+  heroBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 14,
+    backgroundColor: palette.surface,
+    borderWidth: 1,
+    borderColor: palette.border,
+  },
+  heroBadgeText: {
+    color: palette.textPrimary,
+    fontWeight: '700',
+  },
+  heroStats: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  heroStat: {
+    flex: 1,
+    minWidth: 120,
+    backgroundColor: palette.surface,
+    borderRadius: 14,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: palette.border,
+  },
+  heroStatLabel: {
+    color: palette.textMuted,
+    fontSize: 12,
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+  },
+  heroStatValue: {
+    color: palette.textPrimary,
+    fontSize: 18,
+    fontWeight: '700',
+    marginTop: 2,
   },
   sectionHeader: {
     color: palette.textSecondary,

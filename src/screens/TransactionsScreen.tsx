@@ -236,6 +236,7 @@ export default function TransactionsScreen() {
     setSaving(true);
     try {
       const hasSplit = othersParticipants.length > 0;
+      const amountToStore = hasSplit ? total : self.amountValue;
 
       const splits = hasSplit
         ? [
@@ -248,7 +249,7 @@ export default function TransactionsScreen() {
         : [];
 
       await updateExpense(editingExpense.id, {
-        amount: self.amountValue,
+        amount: amountToStore,
         category: categoryDraft.trim() || undefined,
         note: noteDraft.trim() || undefined,
         totalAmount: hasSplit ? total : self.amountValue,
@@ -298,6 +299,8 @@ export default function TransactionsScreen() {
   }
 
   const backgroundGradient = mode === 'light' ? ['#eef3ff', '#dae3ff'] : ['#030b18', '#101c2f'];
+  const heroGradient = mode === 'light' ? ['#e8edff', '#d3ddff'] : ['#0b1430', '#0d1a3f'];
+  const rangeLabel = RANGE_OPTIONS.find((opt) => opt.id === range)?.label ?? 'All time';
 
   return (
     <LinearGradient colors={backgroundGradient} style={styles.background}>
@@ -308,21 +311,35 @@ export default function TransactionsScreen() {
           ItemSeparatorComponent={() => <View style={{ height: 16 }} />}
           ListHeaderComponent={
             <View style={styles.header}>
-              <View style={styles.summaryCard}>
-                <View style={styles.summaryColumn}>
-                  <Text style={styles.summaryEyebrow}>Spent in view</Text>
-                  <Text style={styles.summaryValue}>${summary.total.toFixed(2)}</Text>
-                  <Text style={styles.summaryMeta}>
-                    {summary.entries} {summary.entries === 1 ? 'entry' : 'entries'}
-                  </Text>
+              <LinearGradient colors={heroGradient} style={styles.summaryCard}>
+                <View style={styles.heroHeader}>
+                  <View>
+                    <Text style={styles.summaryEyebrow}>Transactions</Text>
+                    <Text style={styles.title}>Command center</Text>
+                    <Text style={styles.summaryMeta}>
+                      {summary.entries} {summary.entries === 1 ? 'entry' : 'entries'} in {rangeLabel}
+                    </Text>
+                  </View>
+                  <View style={styles.heroBadge}>
+                    <IconSymbol name="sparkles" size={16} color={palette.accent} />
+                    <Text style={styles.heroBadgeText}>{summary.topCategory}</Text>
+                  </View>
                 </View>
-                <View style={styles.summaryDivider} />
-                <View style={styles.summaryColumn}>
-                  <Text style={styles.summaryEyebrow}>Average</Text>
-                  <Text style={styles.summaryValueSmall}>${summary.avg.toFixed(2)}</Text>
-                  <Text style={styles.summaryMeta}>Top category: {summary.topCategory}</Text>
+                <View style={styles.summaryGrid}>
+                  <View style={styles.summaryTile}>
+                    <Text style={styles.summaryTileLabel}>Spent</Text>
+                    <Text style={styles.summaryTileValue}>${summary.total.toFixed(2)}</Text>
+                  </View>
+                  <View style={styles.summaryTile}>
+                    <Text style={styles.summaryTileLabel}>Average</Text>
+                    <Text style={styles.summaryTileValue}>${summary.avg.toFixed(2)}</Text>
+                  </View>
+                  <View style={styles.summaryTile}>
+                    <Text style={styles.summaryTileLabel}>Top category</Text>
+                    <Text style={styles.summaryTileValue}>{summary.topCategory}</Text>
+                  </View>
                 </View>
-              </View>
+              </LinearGradient>
               <View style={styles.filterRow}>
                 {RANGE_OPTIONS.map((option) => {
                   const active = option.id === range;
@@ -517,16 +534,17 @@ const createStyles = (palette: Palette) =>
   summaryCard: {
     backgroundColor: palette.surface,
     borderRadius: 24,
-    padding: 20,
+    padding: 18,
     borderWidth: 1,
     borderColor: palette.border,
-    flexDirection: 'row',
-    alignItems: 'center',
+    gap: 12,
     ...cardShadow,
   },
-  summaryColumn: {
-    flex: 1,
-    gap: 6,
+  heroHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: 12,
   },
   summaryEyebrow: {
     color: palette.textMuted,
@@ -534,25 +552,10 @@ const createStyles = (palette: Palette) =>
     textTransform: 'uppercase',
     letterSpacing: 0.6,
   },
-  summaryValue: {
-    color: palette.textPrimary,
-    fontSize: 28,
-    fontWeight: '700',
-  },
-  summaryValueSmall: {
-    color: palette.textPrimary,
-    fontSize: 22,
-    fontWeight: '700',
-  },
   summaryMeta: {
     color: palette.textSecondary,
-    fontSize: 13,
-  },
-  summaryDivider: {
-    width: 1,
-    height: '70%',
-    backgroundColor: palette.border,
-    marginHorizontal: 16,
+    fontSize: 14,
+    marginTop: 2,
   },
   filterRow: {
     flexDirection: 'row',
@@ -579,10 +582,10 @@ const createStyles = (palette: Palette) =>
   },
   title: {
     color: palette.textPrimary,
-    fontSize: 24,
-    fontWeight: '700',
+    fontSize: 26,
+    fontWeight: '800',
     fontFamily: Fonts.rounded,
-    marginBottom: 16,
+    marginBottom: 8,
   },
   card: {
     backgroundColor: palette.surface,
@@ -645,6 +648,47 @@ const createStyles = (palette: Palette) =>
   },
   deleteButton: {
     color: palette.danger,
+  },
+  summaryGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  summaryTile: {
+    flex: 1,
+    minWidth: 120,
+    backgroundColor: palette.surface,
+    borderRadius: 14,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: palette.border,
+  },
+  summaryTileLabel: {
+    color: palette.textMuted,
+    fontSize: 12,
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+  },
+  summaryTileValue: {
+    color: palette.textPrimary,
+    fontSize: 18,
+    fontWeight: '700',
+    marginTop: 2,
+  },
+  heroBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 14,
+    backgroundColor: palette.surface,
+    borderWidth: 1,
+    borderColor: palette.border,
+  },
+  heroBadgeText: {
+    color: palette.textPrimary,
+    fontWeight: '700',
   },
   splitSummary: {
     marginTop: 12,

@@ -5,6 +5,7 @@ import { observeHistoricalSummaries, MonthlySummary } from '@/services/expenses'
 import { cardShadow, Palette } from '@/styles/palette';
 import { LinearGradient } from '@/utils/LinearGradient';
 import { useAppTheme } from '@/styles/ThemeProvider';
+import { IconSymbol } from '@/components/ui/icon-symbol';
 
 const MONTH_LABELS = [
   'January',
@@ -56,7 +57,18 @@ export default function HistoryScreen() {
     [summaries, selectedMonth],
   );
 
+  const aggregate = useMemo(() => {
+    if (!summaries.length) return { average: 0, total: 0, bestLabel: '—' };
+    const total = summaries.reduce((sum, item) => sum + item.summary.totalSpent, 0);
+    const average = total / summaries.length;
+    const best = summaries.reduce((prev, current) =>
+      current.summary.remainingBudget > prev.summary.remainingBudget ? current : prev,
+    );
+    return { average, total, bestLabel: formatMonth(best.id) };
+  }, [summaries]);
+
   const detailGradient = mode === 'light' ? ['#e1e7ff', '#cbd5ff'] : ['#243357', '#101c33'];
+  const heroGradient = mode === 'light' ? ['#eef2ff', '#e0e7ff'] : ['#0b1430', '#0d1a3f'];
 
   return (
     <ScrollView
@@ -64,6 +76,43 @@ export default function HistoryScreen() {
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}>
       <Text style={styles.title}>Monthly history</Text>
+
+      <LinearGradient
+        colors={heroGradient}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.heroCard}>
+        <View style={styles.heroHeader}>
+          <View>
+            <Text style={styles.heroEyebrow}>Trendline</Text>
+            <Text style={styles.heroTitle}>Look back to plan ahead</Text>
+            <Text style={styles.heroSubtitle}>
+              {summaries.length
+                ? 'Tap a month to compare spend and remaining budget.'
+                : 'History is empty. Start logging to build your timeline.'}
+            </Text>
+          </View>
+          <View style={styles.heroBadge}>
+            <IconSymbol name="sparkles" size={14} color={palette.accent} />
+            <Text style={styles.heroBadgeText}>{summaries.length} month(s)</Text>
+          </View>
+        </View>
+
+        <View style={styles.heroStats}>
+          <View style={styles.heroStat}>
+            <Text style={styles.heroStatLabel}>Average spend</Text>
+            <Text style={styles.heroStatValue}>{currencyFormatter.format(aggregate.average)}</Text>
+          </View>
+          <View style={styles.heroStat}>
+            <Text style={styles.heroStatLabel}>Lifetime tracked</Text>
+            <Text style={styles.heroStatValue}>{currencyFormatter.format(aggregate.total)}</Text>
+          </View>
+          <View style={styles.heroStat}>
+            <Text style={styles.heroStatLabel}>Best cushion</Text>
+            <Text style={styles.heroStatValue}>{aggregate.bestLabel}</Text>
+          </View>
+        </View>
+      </LinearGradient>
 
       <View style={styles.timeline}>
         {summaries.length === 0 ? (
@@ -139,6 +188,78 @@ const createStyles = (palette: Palette) =>
     padding: 24,
     paddingBottom: 48,
     gap: 24,
+  },
+  heroCard: {
+    borderRadius: 24,
+    padding: 20,
+    gap: 14,
+    borderWidth: 1,
+    borderColor: palette.border,
+    ...cardShadow,
+  },
+  heroHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  heroEyebrow: {
+    color: palette.textMuted,
+    fontSize: 12,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+  },
+  heroTitle: {
+    color: palette.textPrimary,
+    fontSize: 24,
+    fontWeight: '800',
+    letterSpacing: 0.4,
+  },
+  heroSubtitle: {
+    color: palette.textSecondary,
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  heroBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 14,
+    backgroundColor: palette.surface,
+    borderWidth: 1,
+    borderColor: palette.border,
+  },
+  heroBadgeText: {
+    color: palette.textPrimary,
+    fontWeight: '700',
+  },
+  heroStats: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  heroStat: {
+    flex: 1,
+    minWidth: 120,
+    backgroundColor: palette.surface,
+    borderRadius: 14,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: palette.border,
+  },
+  heroStatLabel: {
+    color: palette.textMuted,
+    fontSize: 12,
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+  },
+  heroStatValue: {
+    color: palette.textPrimary,
+    fontSize: 18,
+    fontWeight: '700',
+    marginTop: 2,
   },
   title: {
     color: palette.textPrimary,

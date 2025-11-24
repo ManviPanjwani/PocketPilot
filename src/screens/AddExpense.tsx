@@ -191,9 +191,10 @@ export default function AddExpense() {
             })),
           ]
         : undefined;
+      const amountToStore = hasSplit ? total : selfShare;
 
       await addExpense({
-        amount: selfShare,
+        amount: amountToStore,
         category: normalizedCategory,
         note: normalizedNote,
         totalAmount: hasSplit ? total : selfShare,
@@ -228,9 +229,13 @@ export default function AddExpense() {
         style={styles.container}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}>
-      <View style={styles.form}>
-        <Text style={styles.heading}>Add Expense</Text>
+      <View style={styles.pageHeader}>
+        <Text style={styles.eyebrow}>Add expense</Text>
+        <Text style={styles.heading}>Log a spend</Text>
+        <Text style={styles.subheading}>Track totals, splits, and an optional note.</Text>
+      </View>
 
+      <View style={styles.form}>
         <View style={styles.heroCard}>
           <View style={styles.heroHeader}>
             <View>
@@ -429,15 +434,29 @@ const createStyles = (palette: Palette) =>
     flex: 1,
   },
   container: { flex: 1 },
-  content: { padding: 24, paddingBottom: 64 },
-  form: { flex: 1, gap: 18 },
+  content: { padding: 24, paddingBottom: 64, gap: 20 },
+  pageHeader: {
+    gap: 6,
+  },
+  eyebrow: {
+    color: palette.textMuted,
+    fontSize: 12,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+  },
   heading: {
     color: palette.textPrimary,
     fontSize: 26,
-    fontWeight: '700',
+    fontWeight: '800',
     fontFamily: Fonts.rounded,
-    marginBottom: 8,
+    letterSpacing: 0.4,
   },
+  subheading: {
+    color: palette.textSecondary,
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  form: { flex: 1, gap: 18 },
   heroCard: {
     backgroundColor: palette.surface,
     borderRadius: 24,
