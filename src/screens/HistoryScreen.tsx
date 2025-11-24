@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { observeHistoricalSummaries, MonthlySummary } from '@/services/expenses';
 import { cardShadow, Palette } from '@/styles/palette';
@@ -38,6 +39,7 @@ const currencyFormatter = new Intl.NumberFormat(undefined, {
 export default function HistoryScreen() {
   const { palette, mode } = useAppTheme();
   const styles = useMemo(() => createStyles(palette), [palette]);
+  const insets = useSafeAreaInsets();
   const [summaries, setSummaries] = useState<Array<{ id: string; summary: MonthlySummary }>>([]);
   const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
 
@@ -71,10 +73,11 @@ export default function HistoryScreen() {
   const heroGradient = mode === 'light' ? ['#eef2ff', '#e0e7ff'] : ['#0b1430', '#0d1a3f'];
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.content}
-      showsVerticalScrollIndicator={false}>
+    <SafeAreaView style={{ flex: 1, paddingTop: insets.top || 12 }}>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}>
       <Text style={styles.title}>Monthly history</Text>
 
       <LinearGradient
@@ -174,7 +177,8 @@ export default function HistoryScreen() {
           )}
         </LinearGradient>
       ) : null}
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 

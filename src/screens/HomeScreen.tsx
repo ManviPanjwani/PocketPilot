@@ -10,6 +10,7 @@ import {
   View,
   Switch,
 } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from '@/utils/LinearGradient';
 
 import { firebaseAuth } from '../firebase';
@@ -43,6 +44,7 @@ const CATEGORY_COLORS = ['#4f46e5', '#10b981', '#f59e0b', '#f97316', '#a855f7', 
 export default function HomeScreen() {
   const { palette, mode, setMode } = useAppTheme();
   const styles = useMemo(() => createStyles(palette), [palette]);
+  const insets = useSafeAreaInsets();
   const [email, setEmail] = useState<string | null>(firebaseAuth.currentUser?.email ?? null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [summary, setSummary] = useState<MonthlySummary>({
@@ -268,10 +270,11 @@ export default function HomeScreen() {
     spendRatio > 0.85 ? palette.danger : spendRatio > 0.65 ? palette.warning : palette.accent;
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.content}
-      showsVerticalScrollIndicator={false}>
+    <SafeAreaView style={[styles.container, { paddingTop: insets.top || 12 }]}>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}>
       <View style={styles.header}>
         <View>
           <Text style={styles.greeting}>Welcome back</Text>
@@ -655,7 +658,8 @@ export default function HomeScreen() {
           ))
         )}
       </View>
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
@@ -682,6 +686,8 @@ const createStyles = (palette: Palette) =>
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    flexWrap: 'wrap',
+    rowGap: 8,
   },
   ribbonBadge: {
     flexDirection: 'row',
@@ -770,6 +776,8 @@ const createStyles = (palette: Palette) =>
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    flexWrap: 'wrap',
+    rowGap: 12,
   },
   statPills: {
     flexDirection: 'row',
@@ -817,6 +825,9 @@ const createStyles = (palette: Palette) =>
     flexDirection: 'row',
     gap: 12,
     alignItems: 'center',
+    flexShrink: 1,
+    flexWrap: 'wrap',
+    justifyContent: 'flex-end',
   },
   themeToggleLabel: {
     color: palette.textMuted,
@@ -871,6 +882,8 @@ const createStyles = (palette: Palette) =>
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 8,
+    flexWrap: 'wrap',
+    rowGap: 8,
   },
   heroChip: {
     flexDirection: 'row',
@@ -882,6 +895,8 @@ const createStyles = (palette: Palette) =>
     backgroundColor: palette.surface,
     borderWidth: 1,
     borderColor: palette.border,
+    minWidth: 0,
+    flexShrink: 1,
   },
   heroChipText: {
     color: palette.textSecondary,
@@ -909,6 +924,8 @@ const createStyles = (palette: Palette) =>
     backgroundColor: palette.backgroundAlt,
     borderWidth: 1,
     borderColor: palette.border,
+    minWidth: 0,
+    flexShrink: 1,
   },
   heroChipSoftText: {
     color: palette.textSecondary,

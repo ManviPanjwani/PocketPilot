@@ -9,6 +9,7 @@ import {
   View,
   Platform,
 } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Goal, observeGoals, addGoal, deleteGoal } from '@/services/goals';
 import { observeMonthlySummary, MonthlySummary } from '@/services/expenses';
@@ -37,6 +38,7 @@ const normalizeCategoryLabel = (raw?: string | null, fallback?: string) => {
 export default function GoalsScreen() {
   const { palette, mode } = useAppTheme();
   const styles = useMemo(() => createStyles(palette), [palette]);
+  const insets = useSafeAreaInsets();
   const [goals, setGoals] = useState<Goal[]>([]);
   const [title, setTitle] = useState('');
   const [target, setTarget] = useState('');
@@ -348,47 +350,49 @@ export default function GoalsScreen() {
   const heroGradient = mode === 'light' ? ['#e8edff', '#d2dcff'] : ['#0f1c35', '#091328'];
 
   return (
-    <FlatList
-      data={listData}
-      keyExtractor={(item) => item.key}
-      renderItem={renderItem}
-      contentContainerStyle={styles.listContent}
-      style={styles.list}
-      ListHeaderComponent={
-        <LinearGradient colors={heroGradient} style={styles.heroCard}>
-          <View style={styles.heroHeader}>
-            <View>
-              <Text style={styles.heroEyebrow}>Goals cockpit</Text>
-              <Text style={styles.heroTitle}>Stay on track</Text>
-              <Text style={styles.heroSubtitle}>
-                {goals.length ? 'Monitor active goals and celebrate wins.' : 'Set a goal to start tracking spend.'}
-              </Text>
+    <SafeAreaView style={{ flex: 1, paddingTop: insets.top || 12 }}>
+      <FlatList
+        data={listData}
+        keyExtractor={(item) => item.key}
+        renderItem={renderItem}
+        contentContainerStyle={styles.listContent}
+        style={styles.list}
+        ListHeaderComponent={
+          <LinearGradient colors={heroGradient} style={styles.heroCard}>
+            <View style={styles.heroHeader}>
+              <View>
+                <Text style={styles.heroEyebrow}>Goals cockpit</Text>
+                <Text style={styles.heroTitle}>Stay on track</Text>
+                <Text style={styles.heroSubtitle}>
+                  {goals.length ? 'Monitor active goals and celebrate wins.' : 'Set a goal to start tracking spend.'}
+                </Text>
+              </View>
+              <View style={styles.heroBadge}>
+                <IconSymbol name="shield.checkerboard" size={16} color={palette.accent} />
+                <Text style={styles.heroBadgeText}>
+                  {Math.round(aggregate.percent * 100)}% funded
+                </Text>
+              </View>
             </View>
-            <View style={styles.heroBadge}>
-              <IconSymbol name="shield.checkerboard" size={16} color={palette.accent} />
-              <Text style={styles.heroBadgeText}>
-                {Math.round(aggregate.percent * 100)}% funded
-              </Text>
+            <View style={styles.heroStats}>
+              <View style={styles.heroStat}>
+                <Text style={styles.heroStatLabel}>Active</Text>
+                <Text style={styles.heroStatValue}>{upcomingGoals.length}</Text>
+              </View>
+              <View style={styles.heroStat}>
+                <Text style={styles.heroStatLabel}>Completed</Text>
+                <Text style={styles.heroStatValue}>{completedGoals.length}</Text>
+              </View>
+              <View style={styles.heroStat}>
+                <Text style={styles.heroStatLabel}>Spend this month</Text>
+                <Text style={styles.heroStatValue}>{currencyFormatter.format(summary.totalSpent)}</Text>
+              </View>
             </View>
-          </View>
-          <View style={styles.heroStats}>
-            <View style={styles.heroStat}>
-              <Text style={styles.heroStatLabel}>Active</Text>
-              <Text style={styles.heroStatValue}>{upcomingGoals.length}</Text>
-            </View>
-            <View style={styles.heroStat}>
-              <Text style={styles.heroStatLabel}>Completed</Text>
-              <Text style={styles.heroStatValue}>{completedGoals.length}</Text>
-            </View>
-            <View style={styles.heroStat}>
-              <Text style={styles.heroStatLabel}>Spend this month</Text>
-              <Text style={styles.heroStatValue}>{currencyFormatter.format(summary.totalSpent)}</Text>
-            </View>
-          </View>
-        </LinearGradient>
-      }
-      ListHeaderComponentStyle={styles.listHeader}
-    />
+          </LinearGradient>
+        }
+        ListHeaderComponentStyle={styles.listHeader}
+      />
+    </SafeAreaView>
   );
 }
 

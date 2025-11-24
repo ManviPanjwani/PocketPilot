@@ -10,6 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { addExpense } from '@/services/expenses';
 import { AppButton } from '@/components/ui/AppButton';
@@ -38,6 +39,7 @@ const round = (value: number) => Math.round(value * 100) / 100;
 export default function AddExpense() {
   const { palette, mode } = useAppTheme();
   const styles = useMemo(() => createStyles(palette), [palette]);
+  const insets = useSafeAreaInsets();
   const [totalAmount, setTotalAmount] = useState('50.00');
   const [others, setOthers] = useState<Participant[]>([]);
   const [category, setCategory] = useState('');
@@ -224,11 +226,12 @@ export default function AddExpense() {
   const backgroundGradient = mode === 'light' ? ['#eef3ff', '#d9e3ff'] : ['#030b18', '#101c2f'];
 
   return (
-    <LinearGradient colors={backgroundGradient} style={styles.background}>
-      <ScrollView
-        style={styles.container}
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}>
+    <SafeAreaView style={[styles.background, { paddingTop: insets.top || 12 }]}>
+      <LinearGradient colors={backgroundGradient} style={styles.background}>
+        <ScrollView
+          style={styles.container}
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}>
       <View style={styles.pageHeader}>
         <Text style={styles.eyebrow}>Add expense</Text>
         <Text style={styles.heading}>Log a spend</Text>
@@ -423,8 +426,9 @@ export default function AddExpense() {
           disabled={busy}
         />
       </View>
-      </ScrollView>
-    </LinearGradient>
+        </ScrollView>
+      </LinearGradient>
+    </SafeAreaView>
   );
 }
 

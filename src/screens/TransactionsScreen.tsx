@@ -12,6 +12,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
   observeRecentExpenses,
@@ -56,6 +57,7 @@ type RangeFilter = (typeof RANGE_OPTIONS)[number]['id'];
 export default function TransactionsScreen() {
   const { palette, mode } = useAppTheme();
   const styles = useMemo(() => createStyles(palette), [palette]);
+  const insets = useSafeAreaInsets();
   const [items, setItems] = useState<Expense[]>([]);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [totalDraft, setTotalDraft] = useState('');
@@ -303,8 +305,9 @@ export default function TransactionsScreen() {
   const rangeLabel = RANGE_OPTIONS.find((opt) => opt.id === range)?.label ?? 'All time';
 
   return (
-    <LinearGradient colors={backgroundGradient} style={styles.background}>
-      <View style={styles.container}>
+    <SafeAreaView style={{ flex: 1, paddingTop: insets.top || 12 }}>
+      <LinearGradient colors={backgroundGradient} style={styles.background}>
+        <View style={styles.container}>
         <FlatList
           data={filteredItems}
           keyExtractor={(item) => item.id!}
@@ -521,8 +524,9 @@ export default function TransactionsScreen() {
           </View>
         </View>
       </Modal>
-      </View>
-    </LinearGradient>
+        </View>
+      </LinearGradient>
+    </SafeAreaView>
   );
 }
 
