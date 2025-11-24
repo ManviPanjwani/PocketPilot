@@ -178,6 +178,7 @@ export default function HomeScreen() {
         value: currencyFormatter.format(summary.totalSpent),
         hint: 'So far this month',
         colors: statPillGradients[0],
+        icon: 'creditcard.fill' as const,
       },
       {
         key: 'remaining',
@@ -185,6 +186,7 @@ export default function HomeScreen() {
         value: currencyFormatter.format(summary.remainingBudget),
         hint: summary.monthlyIncome > 0 ? 'Left in your budget' : 'Set a monthly income',
         colors: statPillGradients[1],
+        icon: 'shield.checkerboard' as const,
       },
       {
         key: 'transactions',
@@ -192,6 +194,7 @@ export default function HomeScreen() {
         value: summary.transactions.toString(),
         hint: 'Logged this month',
         colors: statPillGradients[2],
+        icon: 'chart.bar.fill' as const,
       },
     ],
     [
@@ -245,9 +248,24 @@ export default function HomeScreen() {
     summary.monthlyIncome > 0 ? Math.min(summary.totalSpent / summary.monthlyIncome, 1) : 0;
 
   const heroGradient = mode === 'light' ? ['#dfe6ff', '#c7d4ff'] : ['#243357', '#101c33'];
+  const introGradient = mode === 'light' ? ['#eef2ff', '#e0e7ff', '#f8fafc'] : ['#0b1430', '#0d1a3f', '#0f172a'];
   const handleThemeToggle = (next: boolean) => {
     void setMode(next ? 'light' : 'dark');
   };
+  const hasBudget = summary.monthlyIncome > 0;
+  const pacingLabel = !hasBudget
+    ? 'Set a budget to unlock insights'
+    : spendRatio < 0.35
+      ? 'Healthy pace'
+      : spendRatio < 0.7
+        ? 'Monitor mid-month spend'
+        : 'Tighten expenses';
+  const heroSubcopy =
+    activity.length > 0
+      ? 'Your latest logs are keeping PocketPilot fresh.'
+      : 'Log an expense to start charting this month.';
+  const progressColor =
+    spendRatio > 0.85 ? palette.danger : spendRatio > 0.65 ? palette.warning : palette.accent;
 
   return (
     <ScrollView
@@ -280,6 +298,51 @@ export default function HomeScreen() {
         </View>
       </View>
 
+      <LinearGradient
+        colors={introGradient}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.ribbonCard}>
+        <View style={styles.ribbonRow}>
+          <View style={styles.ribbonBadge}>
+            <Text style={styles.ribbonBadgeText}>PocketPilot</Text>
+            <View style={styles.ribbonBadgeDot} />
+            <Text style={styles.ribbonBadgeTextMuted}>Live workspace</Text>
+          </View>
+          <View style={styles.ribbonStatus}>
+            <IconSymbol name="shield.checkerboard" size={16} color={palette.accentBright} />
+            <Text style={styles.ribbonStatusText}>{pacingLabel}</Text>
+          </View>
+        </View>
+        <Text style={styles.ribbonTitle}>Guide your month with confidence</Text>
+        <Text style={styles.ribbonSubtitle}>{heroSubcopy}</Text>
+        <View style={styles.ribbonChips}>
+          <View style={styles.ribbonChip}>
+            <IconSymbol name="chart.bar.fill" size={16} color={palette.accentBright} />
+            <View>
+              <Text style={styles.ribbonChipLabel}>Spent</Text>
+              <Text style={styles.ribbonChipValue}>{currencyFormatter.format(summary.totalSpent)}</Text>
+            </View>
+          </View>
+          <View style={styles.ribbonChip}>
+            <IconSymbol name="person.2.fill" size={16} color={palette.accentBright} />
+            <View>
+              <Text style={styles.ribbonChipLabel}>Activity</Text>
+              <Text style={styles.ribbonChipValue}>{activity.length} updates</Text>
+            </View>
+          </View>
+          <View style={styles.ribbonChip}>
+            <IconSymbol name="clock.fill" size={16} color={palette.accentBright} />
+            <View>
+              <Text style={styles.ribbonChipLabel}>Budget</Text>
+              <Text style={styles.ribbonChipValue}>
+                {hasBudget ? formattedIncome : 'Set your income'}
+              </Text>
+            </View>
+          </View>
+        </View>
+      </LinearGradient>
+
       <View style={styles.statPills}>
         {statPillConfigs.map((pill) => (
           <LinearGradient
@@ -288,7 +351,12 @@ export default function HomeScreen() {
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.statPill}>
-            <Text style={styles.statLabel}>{pill.label}</Text>
+            <View style={styles.statHeader}>
+              <View style={styles.statIcon}>
+                <IconSymbol name={pill.icon} size={16} color="#ffffff" />
+              </View>
+              <Text style={styles.statLabel}>{pill.label}</Text>
+            </View>
             <Text style={styles.statValue}>{pill.value}</Text>
             <Text style={styles.statHint}>{pill.hint}</Text>
           </LinearGradient>
@@ -300,6 +368,19 @@ export default function HomeScreen() {
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.heroCard}>
+        <View style={styles.heroTopRow}>
+          <View style={styles.heroChip}>
+            <Text style={styles.heroChipText}>Month in focus</Text>
+            <View style={styles.heroChipDivider} />
+            <Text style={styles.heroChipValue}>
+              {summary.transactions} {summary.transactions === 1 ? 'log' : 'logs'}
+            </Text>
+          </View>
+          <View style={styles.heroChipSoft}>
+            <IconSymbol name="sparkles" size={14} color={palette.textSecondary} />
+            <Text style={styles.heroChipSoftText}>{pacingLabel}</Text>
+          </View>
+        </View>
         <View style={styles.heroContent}>
           <View>
             <Text style={styles.heroLabel}>Remaining budget</Text>
@@ -317,6 +398,40 @@ export default function HomeScreen() {
           Keep logging expenses to stay on track this month.
         </Text>
       </LinearGradient>
+
+      <View style={[styles.card, styles.calloutCard]}>
+        <View style={styles.calloutHeader}>
+          <View style={styles.calloutIcon}>
+            <IconSymbol name="paperplane.fill" size={16} color={palette.onAccent} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.calloutTitle}>Ready for launch</Text>
+            <Text style={styles.calloutSubtitle}>
+              {pacingLabel} • {summary.transactions} {summary.transactions === 1 ? 'entry' : 'entries'} this month
+            </Text>
+          </View>
+        </View>
+        <View style={styles.calloutChips}>
+          <View style={styles.calloutChip}>
+            <Text style={styles.calloutChipLabel}>Spend</Text>
+            <Text style={styles.calloutChipValue}>
+              {currencyFormatter.format(summary.totalSpent)}
+            </Text>
+          </View>
+          <View style={styles.calloutChip}>
+            <Text style={styles.calloutChipLabel}>Remaining</Text>
+            <Text style={styles.calloutChipValue}>
+              {currencyFormatter.format(summary.remainingBudget)}
+            </Text>
+          </View>
+          <View style={[styles.calloutChip, styles.calloutChipAccent]}>
+            <Text style={styles.calloutChipLabel}>Top focus</Text>
+            <Text style={styles.calloutChipValue}>
+              {topCategories[0]?.category ?? 'Add a category'}
+            </Text>
+          </View>
+        </View>
+      </View>
 
       <View style={styles.card}>
         <View style={styles.cardHeader}>
@@ -414,7 +529,12 @@ export default function HomeScreen() {
         {summary.monthlyIncome > 0 ? (
           <View style={styles.progressWrapper}>
             <View style={styles.progressTrack}>
-              <View style={[styles.progressFill, { width: `${spendRatio * 100}%` }]} />
+              <View
+                style={[
+                  styles.progressFill,
+                  { width: `${spendRatio * 100}%`, backgroundColor: progressColor },
+                ]}
+              />
             </View>
             <Text style={styles.progressCaption}>
               {percentFormatter.format(spendRatio)} of your budget spent
@@ -550,6 +670,102 @@ const createStyles = (palette: Palette) =>
     paddingBottom: 64,
     gap: 24,
   },
+  ribbonCard: {
+    borderRadius: 28,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: palette.border,
+    gap: 12,
+    ...cardShadow,
+  },
+  ribbonRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  ribbonBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: palette.surfaceElevated,
+    borderWidth: 1,
+    borderColor: palette.border,
+  },
+  ribbonBadgeText: {
+    color: palette.textPrimary,
+    fontWeight: '700',
+    letterSpacing: 0.6,
+    fontSize: 12,
+    textTransform: 'uppercase',
+  },
+  ribbonBadgeTextMuted: {
+    color: palette.textMuted,
+    fontWeight: '600',
+    fontSize: 12,
+  },
+  ribbonBadgeDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: palette.accent,
+  },
+  ribbonStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: palette.accentMuted,
+  },
+  ribbonStatusText: {
+    color: palette.textPrimary,
+    fontWeight: '600',
+    fontSize: 13,
+  },
+  ribbonTitle: {
+    color: palette.textPrimary,
+    fontSize: 22,
+    fontWeight: '800',
+    fontFamily: Fonts.rounded,
+    letterSpacing: 0.4,
+  },
+  ribbonSubtitle: {
+    color: palette.textSecondary,
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  ribbonChips: {
+    flexDirection: 'row',
+    gap: 10,
+    flexWrap: 'wrap',
+  },
+  ribbonChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: palette.surfaceElevated,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: palette.border,
+    minWidth: 110,
+  },
+  ribbonChipLabel: {
+    color: palette.textMuted,
+    fontSize: 12,
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
+  },
+  ribbonChipValue: {
+    color: palette.textPrimary,
+    fontSize: 15,
+    fontWeight: '700',
+  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -566,6 +782,19 @@ const createStyles = (palette: Palette) =>
     borderRadius: 24,
     padding: 18,
     ...cardShadow,
+  },
+  statHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  statIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.16)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   statLabel: {
     color: '#ffffff',
@@ -637,6 +866,54 @@ const createStyles = (palette: Palette) =>
     gap: 12,
     ...cardShadow,
   },
+  heroTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  heroChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 999,
+    backgroundColor: palette.surface,
+    borderWidth: 1,
+    borderColor: palette.border,
+  },
+  heroChipText: {
+    color: palette.textSecondary,
+    fontSize: 12,
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+    fontWeight: '700',
+  },
+  heroChipDivider: {
+    width: 8,
+    height: 1,
+    backgroundColor: palette.border,
+  },
+  heroChipValue: {
+    color: palette.textPrimary,
+    fontWeight: '700',
+  },
+  heroChipSoft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 14,
+    backgroundColor: palette.backgroundAlt,
+    borderWidth: 1,
+    borderColor: palette.border,
+  },
+  heroChipSoftText: {
+    color: palette.textSecondary,
+    fontWeight: '600',
+  },
   heroContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -676,6 +953,62 @@ const createStyles = (palette: Palette) =>
     borderWidth: 1,
     borderColor: palette.border,
     ...cardShadow,
+  },
+  calloutCard: {
+    paddingVertical: 18,
+    gap: 12,
+  },
+  calloutHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  calloutIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: palette.accent,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  calloutTitle: {
+    color: palette.textPrimary,
+    fontSize: 17,
+    fontWeight: '700',
+  },
+  calloutSubtitle: {
+    color: palette.textSecondary,
+    fontSize: 14,
+  },
+  calloutChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  calloutChip: {
+    backgroundColor: palette.surfaceElevated,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: palette.border,
+    minWidth: 110,
+  },
+  calloutChipAccent: {
+    borderColor: palette.accent,
+    backgroundColor: palette.accentMuted,
+  },
+  calloutChipLabel: {
+    color: palette.textMuted,
+    fontSize: 12,
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
+  },
+  calloutChipValue: {
+    color: palette.textPrimary,
+    fontSize: 15,
+    fontWeight: '700',
+    marginTop: 2,
   },
   cardHeader: {
     flexDirection: 'row',
