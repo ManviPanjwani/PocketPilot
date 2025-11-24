@@ -22,8 +22,21 @@ if (!firebase.apps.length) {
 const app = firebase.app();
 const firebaseAuth = firebase.auth();
 // Ensure auth persists across app restarts using AsyncStorage (works on native).
+// Firebase expects a persistence adapter with setItem/getItem/removeItem; build it defensively.
+const nativePersistence =
+  AsyncStorage && typeof AsyncStorage.setItem === 'function'
+    ? ({
+        type: 'LOCAL',
+        setItem: AsyncStorage.setItem,
+        getItem: AsyncStorage.getItem,
+        removeItem: AsyncStorage.removeItem,
+      } as const)
+    : null;
+
 firebaseAuth
-  .setPersistence(firebase.auth.Auth.Persistence.LOCAL)
+  .setPersistence(
+    (nativePersistence ?? firebase.auth.Auth.Persistence.LOCAL) as unknown as firebase.auth.Auth.Persistence,
+  )
   .catch(() => {
     // ignore if persistence cannot be set; auth will fallback to memory
   });

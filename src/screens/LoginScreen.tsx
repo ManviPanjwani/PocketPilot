@@ -12,6 +12,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from '@/utils/LinearGradient';
 
 import { AppButton } from '@/components/ui/AppButton';
@@ -54,6 +55,8 @@ const SAMPLE_STATS = [
   { label: 'Goals funded', value: '3' },
   { label: 'On-time streak', value: '12 days' },
 ];
+
+const SAVED_CRED_KEY = 'pp:last-login';
 
 type LoginThemeConfig = {
   mode: ThemeMode;
@@ -126,6 +129,8 @@ export default function LoginScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [selectedHighlight, setSelectedHighlight] = useState(0);
   const [showPassword, setShowPassword] = useState(false);
+  const [savedUser, setSavedUser] = useState<{ email: string; password: string } | null>(null);
+  const [loadingSaved, setLoadingSaved] = useState(true);
   const { mode: themeMode, setMode: setThemeMode } = useAppTheme();
 
   const theme = LOGIN_THEME_CONFIG[themeMode];
@@ -154,11 +159,37 @@ export default function LoginScreen() {
       } else {
         await signUp(email.trim(), pwd);
       }
+      await AsyncStorage.setItem(SAVED_CRED_KEY, JSON.stringify({ email: email.trim(), password: pwd }));
     } catch (error: any) {
       Alert.alert('PocketPilot', error?.message ?? 'Unable to authenticate right now.');
     } finally {
       setSubmitting(false);
     }
+  };
+
+  React.useEffect(() => {
+    (async () => {
+      try {
+        const raw = await AsyncStorage.getItem(SAVED_CRED_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed?.email && parsed?.password) {
+            setSavedUser({ email: parsed.email, password: parsed.password });
+          }
+        }
+      } catch {
+        // ignore
+      } finally {
+        setLoadingSaved(false);
+      }
+    })();
+  }, []);
+
+  const handleUseSaved = async () => {
+    if (!savedUser || submitting) return;
+    setEmail(savedUser.email);
+    setPwd(savedUser.password);
+    await handleSubmit();
   };
 
   return (
@@ -231,6 +262,20 @@ export default function LoginScreen() {
                   );
                 })}
               </View>
+              {savedUser ? (
+                <TouchableOpacity
+                  style={styles.savedAccount}
+                  onPress={handleUseSaved}
+                  disabled={submitting || loadingSaved}>
+                  <View>
+                    <Text style={styles.savedAccountLabel}>Saved account</Text>
+                    <Text style={styles.savedAccountEmail}>{savedUser.email}</Text>
+                  </View>
+                  <Text style={styles.savedAccountAction}>
+                    {submitting ? 'Signing in…' : 'Tap to fill & sign in'}
+                  </Text>
+                </TouchableOpacity>
+              ) : null}
               <Text style={styles.title}>{title}</Text>
               <Text style={styles.subtitle}>{subtitle}</Text>
 
@@ -495,6 +540,35 @@ const createStyles = (theme: LoginThemeConfig) => {
       fontSize: 12,
       lineHeight: 18,
       textAlign: 'center',
+    },
+    savedAccount: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: theme.tabChipBorder,
+      backgroundColor: theme.tipChipBackground,
+      padding: 12,
+      marginBottom: 4,
+    },
+    savedAccountLabel: {
+      color: theme.palette.textMuted,
+      fontSize: 12,
+      letterSpacing: 0.4,
+      textTransform: 'uppercase',
+      fontWeight: '700',
+    },
+    savedAccountEmail: {
+      color: theme.palette.textPrimary,
+      fontSize: 15,
+      fontWeight: '700',
+      marginTop: 2,
+    },
+    savedAccountAction: {
+      color: theme.palette.accent,
+      fontWeight: '700',
+      fontSize: 13,
     },
     tipsRow: {
       flexDirection: 'row',
