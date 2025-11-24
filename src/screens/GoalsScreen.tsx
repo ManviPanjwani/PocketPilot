@@ -423,6 +423,8 @@ const createStyles = (palette: Palette) =>
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     gap: 12,
+    flexWrap: 'wrap',
+    rowGap: 8,
   },
   heroEyebrow: {
     color: palette.textMuted,
@@ -453,6 +455,8 @@ const createStyles = (palette: Palette) =>
     backgroundColor: palette.surface,
     borderWidth: 1,
     borderColor: palette.border,
+    minWidth: 0,
+    flexShrink: 1,
   },
   heroBadgeText: {
     color: palette.textPrimary,
@@ -471,6 +475,7 @@ const createStyles = (palette: Palette) =>
     padding: 12,
     borderWidth: 1,
     borderColor: palette.border,
+    minHeight: 72,
   },
   heroStatLabel: {
     color: palette.textMuted,

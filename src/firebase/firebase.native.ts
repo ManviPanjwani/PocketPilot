@@ -21,25 +21,9 @@ if (!firebase.apps.length) {
 
 const app = firebase.app();
 const firebaseAuth = firebase.auth();
-const reactNativePersistence = {
-  type: 'LOCAL' as const,
-  async setItem(key: string, value: string) {
-    await AsyncStorage.setItem(key, value);
-  },
-  async getItem(key: string) {
-    return AsyncStorage.getItem(key);
-  },
-  async removeItem(key: string) {
-    await AsyncStorage.removeItem(key);
-  },
-};
-
-// Ensure auth persists across app restarts using AsyncStorage.
+// Ensure auth persists across app restarts using AsyncStorage (works on native).
 firebaseAuth
   .setPersistence(firebase.auth.Auth.Persistence.LOCAL)
-  .catch(async () => {
-    await firebaseAuth.setPersistence(reactNativePersistence as unknown as firebase.auth.Auth.Persistence);
-  })
   .catch(() => {
     // ignore if persistence cannot be set; auth will fallback to memory
   });
