@@ -603,12 +603,15 @@ export default function HomeScreen() {
                     innerRadius={70}
                     padAngle={2}
                     cornerRadius={12}
-                    labels={({ datum }) => `${datum.x}\n${currencyFormatter.format(datum.y)}`}
-                    labelRadius={({ radius }) => radius + 20}
+                    labels={({ datum }: { datum: { x: string; y: number } }) =>
+                      `${datum.x}\n${currencyFormatter.format(datum.y)}`
+                    }
+                    labelRadius={({ radius }: { radius: number }) => radius + 20}
                     style={{
                       data: {
                         // Force colors by index to ensure visible fills
-                        fill: ({ index }) => resolvedPieColors[index % resolvedPieColors.length],
+                        fill: ({ index = 0 }: { index?: number }) =>
+                          resolvedPieColors[index % resolvedPieColors.length],
                         fillOpacity: 1,
                         strokeWidth: 0,
                       },
