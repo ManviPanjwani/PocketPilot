@@ -267,7 +267,7 @@ export default function LoginScreen() {
                   style={styles.savedAccount}
                   onPress={handleUseSaved}
                   disabled={submitting || loadingSaved}>
-                  <View>
+                  <View style={styles.savedAccountTextBlock}>
                     <Text style={styles.savedAccountLabel}>Saved account</Text>
                     <Text style={styles.savedAccountEmail}>{savedUser.email}</Text>
                   </View>
@@ -543,8 +543,10 @@ const createStyles = (theme: LoginThemeConfig) => {
     },
     savedAccount: {
       flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
+      alignItems: 'flex-start',
+      flexWrap: 'wrap',
+      rowGap: 6,
+      columnGap: 10,
       borderRadius: 16,
       borderWidth: 1,
       borderColor: theme.tabChipBorder,
@@ -569,6 +571,12 @@ const createStyles = (theme: LoginThemeConfig) => {
       color: theme.palette.accent,
       fontWeight: '700',
       fontSize: 13,
+      flexShrink: 1,
+      textAlign: 'right',
+    },
+    savedAccountTextBlock: {
+      flex: 1,
+      minWidth: 0,
     },
     tipsRow: {
       flexDirection: 'row',
