@@ -312,7 +312,7 @@ export default function GoalsScreen() {
     return (
       <View style={styles.card}>
         <View style={styles.goalHeader}>
-          <View>
+          <View style={styles.goalTitleBlock}>
             <Text style={styles.goalTitle}>{goal.title}</Text>
             <Text style={styles.goalMeta}>
               {categoryLabel === 'Uncategorized'
@@ -526,7 +526,15 @@ const createStyles = (palette: Palette) =>
   goalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
+    flexWrap: 'wrap',
+    columnGap: 12,
+    rowGap: 8,
+  },
+  goalTitleBlock: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
   },
   goalTitle: {
     color: palette.textPrimary,
@@ -592,6 +600,7 @@ const createStyles = (palette: Palette) =>
   goalDeleteButton: {
     minHeight: 40,
     paddingHorizontal: 16,
+    alignSelf: 'flex-start',
   },
   goalDeleteButtonText: {
     fontSize: 14,

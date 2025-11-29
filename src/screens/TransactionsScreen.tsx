@@ -630,7 +630,8 @@ const createStyles = (palette: Palette) =>
   empty: { color: palette.textSecondary, marginTop: 32, textAlign: 'center' },
   actionsRow: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
+    justifyContent: 'flex-start',
+    flexWrap: 'wrap',
     gap: 10,
     marginTop: 16,
   },
